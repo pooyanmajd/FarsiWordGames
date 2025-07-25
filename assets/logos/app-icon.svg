@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#374151" rx="180"/>
+  
+  <!-- Persepolis Column -->
+  <g transform="translate(512, 400)">
+    <!-- Column shaft -->
+    <rect x="-40" y="100" width="80" height="200" fill="#60a5fa" rx="8"/>
+    
+    <!-- Column capital -->
+    <g transform="translate(0, -50)">
+      <!-- Central platform -->
+      <rect x="-80" y="-20" width="160" height="40" fill="#60a5fa" rx="20"/>
+      <!-- Left ornament -->
+      <ellipse cx="-60" cy="-10" rx="25" ry="15" fill="#60a5fa"/>
+      <!-- Right ornament -->
+      <ellipse cx="60" cy="-10" rx="25" ry="15" fill="#60a5fa"/>
+      <!-- Gold accents -->
+      <circle cx="-60" cy="-10" r="8" fill="#fbbf24"/>
+      <circle cx="60" cy="-10" r="8" fill="#fbbf24"/>
+      <rect x="-30" y="-5" width="60" height="8" fill="#fbbf24" rx="4"/>
+    </g>
+  </g>
+  
+  <!-- Persian letter ف -->
+  <text x="512" y="700" font-family="serif" font-size="200" font-weight="bold" 
+        text-anchor="middle" fill="#fbbf24">ف</text>
+        
+  <!-- Border -->
+  <rect x="60" y="60" width="904" height="904" fill="none" stroke="#60a5fa" stroke-width="8" rx="160"/>
+</svg>
