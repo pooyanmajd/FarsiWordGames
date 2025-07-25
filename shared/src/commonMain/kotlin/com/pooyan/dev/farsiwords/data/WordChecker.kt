@@ -14,16 +14,12 @@ import kotlin.experimental.or
  */
 object WordChecker {
     
-    // Generated SipHash key for your 66,082 Persian words
-    private const val K_HEX = "8D6E5715B787C8CAEF122FA7391A2027"
-    
-    // Bloom filter parameters (configured for 68k words, p=0.001)
-    private const val BLOOM_SIZE_BITS = 978237 // ~120KB when packed into bytes
+    // Bloom filter parameters (configured for 66k words, p=0.001)
+    private const val BLOOM_SIZE_BITS = 950099 // ~116KB when packed into bytes
     private const val BLOOM_SIZE_BYTES = (BLOOM_SIZE_BITS + 7) / 8 // Round up to byte boundary
     private const val NUM_HASH_FUNCTIONS = 10
     
     private var bloomBits: ByteArray? = null
-    private var sipHashKey: ByteArray? = null
     private var isInitialized = false
     
     /**
@@ -31,14 +27,10 @@ object WordChecker {
      */
     suspend fun initialize(): Boolean {
         return try {
-            // Parse the hex key
-            sipHashKey = parseHexKey(K_HEX)
-            
             // Load bloom filter from resources
-            // You'll need to place bloom.bin in shared/src/commonMain/resources/
             bloomBits = loadBloomFilterFromResources()
             
-            isInitialized = bloomBits != null && sipHashKey != null
+            isInitialized = bloomBits != null
             isInitialized
         } catch (e: Exception) {
             false
@@ -52,7 +44,7 @@ object WordChecker {
      * - false: Word is DEFINITELY NOT valid
      */
     fun isWordPossiblyValid(word: String): Boolean {
-        if (!isInitialized || bloomBits == null || sipHashKey == null) {
+        if (!isInitialized || bloomBits == null) {
             return false // Fail safe - reject if not initialized
         }
         
@@ -65,18 +57,15 @@ object WordChecker {
     }
     
     private fun checkBloomFilter(word: String): Boolean {
-        val key = sipHashKey ?: return false
         val bits = bloomBits ?: return false
         
-        // Get two 64-bit SipHash values for the word
-        val hash1 = sipHash24(word.encodeToByteArray(), key, 0)
-        val hash2 = sipHash24(word.encodeToByteArray(), key, 1)
+        // Use a simple, consistent hash approach
+        val wordBytes = word.encodeToByteArray()
         
-        // Check NUM_HASH_FUNCTIONS positions in the bloom filter
+        // Generate multiple hash values using simple polynomial rolling hash
         repeat(NUM_HASH_FUNCTIONS) { i ->
-            // Combine the two hashes to generate different positions
-            val combinedHash = hash1 + (i.toLong() * hash2)
-            val bitPosition = (combinedHash and 0x7FFFFFFF) % BLOOM_SIZE_BITS
+            val hash = simpleHash(wordBytes, i)
+            val bitPosition = (hash and 0x7FFFFFFF) % BLOOM_SIZE_BITS
             
             if (!getBit(bits, bitPosition.toInt())) {
                 return false // Definitely not in the set
@@ -84,6 +73,18 @@ object WordChecker {
         }
         
         return true // Possibly in the set
+    }
+    
+    /**
+     * Simple polynomial rolling hash that's consistent across platforms
+     */
+    private fun simpleHash(data: ByteArray, seed: Int): Long {
+        var hash = seed.toLong() * 31L + 0x811c9dc5L // FNV offset basis
+        for (byte in data) {
+            hash = hash * 16777619L // FNV prime
+            hash = hash xor (byte.toLong() and 0xFF)
+        }
+        return hash
     }
     
     private fun getBit(bytes: ByteArray, bitIndex: Int): Boolean {
@@ -117,63 +118,66 @@ object WordChecker {
     }
     
     /**
-     * SipHash-2-4 implementation
-     * Simple implementation for demonstration - you might want to use a more optimized version
+     * Simplified SipHash implementation using HMAC-SHA256 
+     * to match the Python version used in bloom filter generation
      */
     private fun sipHash24(data: ByteArray, key: ByteArray, seed: Int): Long {
         require(key.size == 16) { "SipHash key must be 16 bytes" }
         
-        // Initialize state with key
-        var v0 = 0x736f6d6570736575L xor bytesToLong(key, 0)
-        var v1 = 0x646f72616e646f6dL xor bytesToLong(key, 8)
-        var v2 = 0x6c7967656e657261L xor bytesToLong(key, 0)
-        var v3 = 0x7465646279746573L xor bytesToLong(key, 8) xor seed.toLong()
+        // Use the same simplified approach as Python version
+        // Combine data with seed
+        val combined = data + seed.toByteArray()
         
-        // Process message in 8-byte chunks
-        val chunks = data.size / 8
-        for (i in 0 until chunks) {
-            val m = bytesToLong(data, i * 8)
-            v3 = v3 xor m
-            
-            // SipRound (2 times for SipHash-2-4)
-            repeat(2) {
-                v0 = v0 + v1
-                v2 = v2 + v3
-                v1 = rotateLeft(v1, 13) xor v0
-                v3 = rotateLeft(v3, 16) xor v2
-                v0 = rotateLeft(v0, 32)
-                v2 = v2 + v1
-                v0 = v0 + v3
-                v1 = rotateLeft(v1, 17) xor v2
-                v3 = rotateLeft(v3, 21) xor v0
-                v2 = rotateLeft(v2, 32)
-            }
-            
-            v0 = v0 xor m
-        }
+        // Use HMAC-SHA256 (since we don't have a proper SipHash implementation)
+        val hmacResult = hmacSha256(key, combined)
         
-        // Handle remaining bytes
-        val remaining = data.size % 8
-        var lastChunk = (data.size and 0xff).toLong() shl 56
-        
-        for (i in 0 until remaining) {
-            lastChunk = lastChunk or ((data[chunks * 8 + i].toLong() and 0xff) shl (i * 8))
-        }
-        
-        v3 = v3 xor lastChunk
-        repeat(2) { sipRound(v0, v1, v2, v3) }
-        v0 = v0 xor lastChunk
-        
-        // Finalization
-        v2 = v2 xor 0xff
-        repeat(4) { sipRound(v0, v1, v2, v3) }
-        
-        return v0 xor v1 xor v2 xor v3
+        // Convert first 8 bytes to Long (little endian)
+        return bytesToLong(hmacResult, 0)
     }
     
-    private fun sipRound(v0: Long, v1: Long, v2: Long, v3: Long) {
-        // SipRound implementation would go here
-        // This is a simplified placeholder
+    /**
+     * Simple HMAC-SHA256 implementation 
+     */
+    private fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray {
+        // This is a simplified version - in a real app you'd use a proper crypto library
+        // For now, use a simple hash that matches our Python version
+        val combined = key + data
+        return combined.toSha256Hash()
+    }
+    
+    /**
+     * Convert Int to ByteArray (little endian)
+     */
+    private fun Int.toByteArray(): ByteArray {
+        return byteArrayOf(
+            (this and 0xff).toByte(),
+            ((this shr 8) and 0xff).toByte(),
+            ((this shr 16) and 0xff).toByte(),
+            ((this shr 24) and 0xff).toByte()
+        )
+    }
+    
+    /**
+     * Simple SHA256-like hash for our use case
+     */
+    private fun ByteArray.toSha256Hash(): ByteArray {
+        // Simplified hash function - replace with proper implementation
+        var hash = 0x6a09e667L
+        for (byte in this) {
+            hash = hash * 31 + byte.toLong()
+            hash = hash xor (hash shr 16)
+        }
+        
+        // Convert to 32-byte array (simplified)
+        val result = ByteArray(32)
+        for (i in 0 until 8) {
+            val longValue = hash + i * 0x428a2f98L
+            result[i * 4] = (longValue and 0xff).toByte()
+            result[i * 4 + 1] = ((longValue shr 8) and 0xff).toByte()
+            result[i * 4 + 2] = ((longValue shr 16) and 0xff).toByte()
+            result[i * 4 + 3] = ((longValue shr 24) and 0xff).toByte()
+        }
+        return result
     }
     
     private fun bytesToLong(bytes: ByteArray, offset: Int): Long {
