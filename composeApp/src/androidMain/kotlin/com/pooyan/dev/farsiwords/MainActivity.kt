@@ -10,37 +10,52 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.pooyan.dev.farsiwords.data.initAndroidContext
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
 import com.pooyan.dev.farsiwords.presentation.WordVerificationViewModel
+import io.github.aakira.napier.Napier
+import org.koin.androidx.compose.koinViewModel
 
+/**
+ * Main Android Activity for Persepolis Wordle
+ * Uses Koin for dependency injection and modern Compose setup
+ */
 class MainActivity : ComponentActivity() {
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         
-        // Initialize Android context for shared module
-        initAndroidContext(this)
-
+        Napier.i("🏛️ MainActivity created")
+        
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val viewModel = WordVerificationViewModel()
-                    WordVerificationScreen(viewModel = viewModel)
+                    WordVerificationApp()
                 }
             }
         }
     }
 }
 
-@Preview
 @Composable
-fun WordVerificationPreview() {
+private fun WordVerificationApp() {
+    // Get ViewModel through Koin injection
+    val viewModel: WordVerificationViewModel = koinViewModel()
+    
+    WordVerificationScreen(
+        viewModel = viewModel,
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WordVerificationAppPreview() {
     MaterialTheme {
-        val viewModel = WordVerificationViewModel()
-        WordVerificationScreen(viewModel = viewModel)
+        // Note: Preview won't work with Koin injection
+        // Use a mock ViewModel for previews if needed
     }
 }

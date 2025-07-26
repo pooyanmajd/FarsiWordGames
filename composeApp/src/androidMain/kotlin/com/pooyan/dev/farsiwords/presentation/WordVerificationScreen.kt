@@ -8,13 +8,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.pooyan.dev.farsiwords.presentation.WordVerificationViewModel
+import com.pooyan.dev.farsiwords.presentation.WordVerificationResult
+import io.github.aakira.napier.Napier
 
 /**
- * Shared Compose UI for word verification testing
- * Works on both Android and iOS
+ * Modern Word Verification Screen using AndroidX ViewModel and Koin DI
+ * - Uses StateFlow for reactive UI updates
+ * - Integrates with Napier logging
+ * - Follows Material 3 design
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,173 +31,132 @@ fun WordVerificationScreen(
     viewModel: WordVerificationViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // Collect state from ViewModel
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
+    // Local state for text input
     var inputText by remember { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
+    Napier.d("WordVerificationScreen rendered - isLoading: ${uiState.isLoading}")
     
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "🇮🇷 Persian Word Checker",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "Bloom Filter Verification Test",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
+        // Title
+        Text(
+            text = "🏛️ Persepolis Wordle - Word Verification",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
         
-        // Status Card
+        // Status Message
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (uiState.isInitialized) 
-                    MaterialTheme.colorScheme.tertiaryContainer 
-                else MaterialTheme.colorScheme.errorContainer
+                containerColor = if (uiState.isInitialized) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.errorContainer
+                }
             )
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (uiState.isLoading) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                        Text("Initializing...")
-                    }
-                }
-                
-                Text(
-                    text = uiState.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            Text(
+                text = uiState.message,
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
         
         // Input Section
         if (uiState.isInitialized) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Test Word Verification",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    OutlinedTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        label = { Text("Enter Persian word (5 letters)") },
-                        placeholder = { Text("داشتن") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        singleLine = true,
-                        enabled = !uiState.isVerifying
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { viewModel.verifyWord(inputText) },
-                            enabled = !uiState.isVerifying && inputText.isNotBlank(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (uiState.isVerifying) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                            } else {
-                                Text("Verify Word")
-                            }
-                        }
-                        
-                        OutlinedButton(
-                            onClick = { viewModel.testCommonWords() },
-                            enabled = !uiState.isVerifying
-                        ) {
-                            Text("Test Common")
-                        }
-                    }
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { inputText = it },
+                label = { Text("Enter 5-letter Persian word") },
+                placeholder = { Text("داشتن") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                enabled = !uiState.isLoading,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Done
+                ),
+                supportingText = {
+                    Text("Enter exactly 5 Persian letters")
                 }
-            }
+            )
             
-            // Current Result
-            uiState.verificationResult?.let { result ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (result.isValid) 
-                            MaterialTheme.colorScheme.tertiaryContainer
-                        else MaterialTheme.colorScheme.errorContainer
-                    )
+            // Action Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        viewModel.verifyWord(inputText)
+                        keyboardController?.hide()
+                    },
+                    enabled = !uiState.isLoading && inputText.isNotBlank(),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Latest Result",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text("Word: ${result.word}")
-                        Text("Status: ${if (result.isValid) "✅ Valid" else "❌ Invalid"}")
-                        Text("Confidence: ${result.confidence}")
-                        Text("Details: ${result.details}")
-                    }
-                }
-            }
-            
-            // History Section
-            if (uiState.verificationHistory.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Verification History (${uiState.verificationHistory.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    TextButton(onClick = { viewModel.clearHistory() }) {
-                        Text("Clear")
+                    } else {
+                        Text("Verify Word")
                     }
                 }
                 
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    LazyColumn(
-                        modifier = Modifier.heightIn(max = 300.dp),
-                        contentPadding = PaddingValues(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(uiState.verificationHistory.reversed()) { result ->
-                            HistoryItem(result = result)
-                        }
-                    }
+                OutlinedButton(
+                    onClick = { viewModel.testCommonWords() },
+                    enabled = !uiState.isLoading,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Test Common")
+                }
+                
+                OutlinedButton(
+                    onClick = { 
+                        viewModel.clearHistory()
+                        inputText = ""
+                    },
+                    enabled = uiState.verificationHistory.isNotEmpty(),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Clear")
+                }
+            }
+        }
+        
+        // Results History
+        if (uiState.verificationHistory.isNotEmpty()) {
+            Text(
+                text = "Verification History",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(uiState.verificationHistory) { result ->
+                    WordResultCard(result = result)
                 }
             }
         }
@@ -196,42 +164,69 @@ fun WordVerificationScreen(
 }
 
 @Composable
-private fun HistoryItem(
+private fun WordResultCard(
     result: WordVerificationResult,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (result.isValid) 
-                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
-            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+            containerColor = if (result.isValid) {
+                MaterialTheme.colorScheme.surfaceVariant
+            } else {
+                MaterialTheme.colorScheme.errorContainer
+            }
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = result.word,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                
                 Text(
-                    text = result.details,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = if (result.isValid) "✅ Valid" else "❌ Invalid",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             
             Text(
-                text = if (result.isValid) "✅" else "❌",
-                style = MaterialTheme.typography.headlineSmall
+                text = if (result.isValid) {
+                    "Word might be valid (0.1% chance of false positive)"
+                } else {
+                    "Word not found in dictionary"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            
+            Text(
+                text = "Verified: ${formatTimestamp(result.timestamp)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    
+    return when {
+        diff < 1000 -> "Just now"
+        diff < 60000 -> "${diff / 1000}s ago"
+        diff < 3600000 -> "${diff / 60000}m ago"
+        else -> "${diff / 3600000}h ago"
     }
 } 

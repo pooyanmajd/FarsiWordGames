@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -35,13 +36,17 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.navigation.compose)
-            implementation(libs.koin.android)
-            implementation(libs.koin.androidx.compose)
+            
+            // NEW: Enhanced Koin DI for Android
+            implementation(libs.bundles.koin.android.bundle)
         }
 
         commonMain.dependencies {
             implementation(project(":shared"))
             implementation(libs.koin.core)
+            
+            // NEW: Logging
+            implementation(libs.napier)
         }
 
         iosMain.dependencies {

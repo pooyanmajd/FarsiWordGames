@@ -35,6 +35,12 @@ junit = "4.13.2"
 androidx-test-ext-junit = "1.2.1"
 espresso-core = "3.6.1"
 
+# NEW LIBRARIES - Added from your example
+napier = "2.6.1"
+koin-annotations = "2.1.0"
+kvault = "2.1.1"
+firebase-gitlive = "2.2.0"
+
 [libraries]
 # Kotlin
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -90,6 +96,13 @@ androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", vers
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose" }
 
+# NEW LIBRARIES - Added from your example
+napier = { module = "io.github.aakira:napier", version.ref = "napier" }
+koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-annotations" }
+kvault = { module = "com.liftric:kvault", version.ref = "kvault" }
+firebase-auth-gitlive = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-gitlive" }
+firebase-firestore-gitlive = { module = "dev.gitlive:firebase-firestore", version.ref = "firebase-gitlive" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -103,3 +116,7 @@ ksp = { id = "com.google.devtools.ksp", version = "2.1.0-1.0.29" }
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
 compose = ["compose-ui", "compose-ui-tooling-preview", "compose-foundation", "compose-material3"]
 compose-android = ["compose-ui", "compose-ui-tooling-preview", "compose-foundation", "compose-material3", "compose-ui-graphics"]
+
+# NEW BUNDLES - Using your suggestions
+kmp-core = ["kotlinx-coroutines-core", "kotlinx-serialization-json", "kotlinx-datetime"]
+koin-android-bundle = ["koin-core", "koin-android", "koin-androidx-compose"]

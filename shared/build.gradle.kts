@@ -30,19 +30,30 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kotlinx.datetime)
+            // Core KMP (using bundle)
+            implementation(libs.bundles.kmp.core)
+            
+            // Networking
             implementation(libs.bundles.ktor.common)
+            
+            // DI (keeping existing + adding improvements)
+            implementation(libs.koin.core)
+            
+            // Persistence
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
-            implementation(libs.koin.core)
+            
+            // NEW: Logging
+            implementation(libs.napier)
         }
 
         androidMain.dependencies {
             implementation(libs.ktor.client.android)
             implementation(libs.androidx.core.ktx)
             implementation(libs.kotlinx.coroutines.android)
+            
+            // NEW: Enhanced Koin for Android
+            implementation(libs.bundles.koin.android.bundle)
         }
 
         iosMain.dependencies {
