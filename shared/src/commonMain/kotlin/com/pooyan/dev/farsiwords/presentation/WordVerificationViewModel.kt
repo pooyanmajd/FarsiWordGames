@@ -4,6 +4,8 @@ import com.pooyan.dev.farsiwords.data.WordChecker
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,29 +15,34 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
- * Shared business logic for word verification
- * Works on both iOS and Android - no platform-specific dependencies
+ * Shared ViewModel for word verification - works on ALL platforms
+ * - Cross-platform lifecycle management
+ * - Uses Koin for dependency injection
+ * - Uses Napier for cross-platform logging
+ * - Contains all business logic
  */
-class WordVerificationLogic : KoinComponent {
+class WordVerificationViewModel : KoinComponent {
     
     // Koin injection
     private val wordChecker: WordChecker by inject()
     
-    // Coroutine scope for async operations
-    private val scope = CoroutineScope(Dispatchers.Main)
+    // CoroutineScope for this ViewModel
+    private val viewModelScope = CoroutineScope(
+        context = SupervisorJob() + Dispatchers.Main.immediate
+    )
     
     // UI State
     private val _uiState = MutableStateFlow(WordVerificationState())
     val uiState: StateFlow<WordVerificationState> = _uiState.asStateFlow()
     
     init {
-        Napier.d("WordVerificationLogic initialized")
+        Napier.d("Shared WordVerificationViewModel initialized")
         initializeWordChecker()
     }
     
     private fun initializeWordChecker() {
         Napier.i("Starting word checker initialization")
-        scope.launch {
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true, 
                 message = "Initializing word checker..."
@@ -76,7 +83,7 @@ class WordVerificationLogic : KoinComponent {
         }
         
         Napier.d("Verifying word: '$word'")
-        scope.launch {
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             try {
@@ -110,7 +117,7 @@ class WordVerificationLogic : KoinComponent {
         Napier.i("Starting common words test")
         val testWords = listOf("داشتن", "ساختن", "گرفتن", "یافتن", "اوردن", "hello", "12345")
         
-        scope.launch {
+        viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 message = "🧪 Testing common words..."
@@ -146,7 +153,8 @@ class WordVerificationLogic : KoinComponent {
     }
     
     fun onCleared() {
-        Napier.d("WordVerificationLogic cleared")
+        Napier.d("Shared WordVerificationViewModel cleared")
+        viewModelScope.cancel()
     }
 }
 

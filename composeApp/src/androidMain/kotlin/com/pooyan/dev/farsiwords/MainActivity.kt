@@ -11,9 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
-import com.pooyan.dev.farsiwords.presentation.WordVerificationViewModel
 import io.github.aakira.napier.Napier
-import org.koin.androidx.compose.koinViewModel
 
 /**
  * Main Android Activity for Persepolis Wordle
@@ -42,11 +40,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun WordVerificationApp() {
-    // Get ViewModel through Koin injection
-    val viewModel: WordVerificationViewModel = koinViewModel()
-    
+    // WordVerificationScreen handles its own ViewModel injection
     WordVerificationScreen(
-        viewModel = viewModel,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -56,6 +51,6 @@ private fun WordVerificationApp() {
 private fun WordVerificationAppPreview() {
     MaterialTheme {
         // Note: Preview won't work with Koin injection
-        // Use a mock ViewModel for previews if needed
+        // Use a mock setup for previews if needed
     }
 }

@@ -15,30 +15,31 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pooyan.dev.farsiwords.presentation.WordVerificationViewModel
-import com.pooyan.dev.farsiwords.presentation.WordVerificationResult
 import io.github.aakira.napier.Napier
+import org.koin.core.context.GlobalContext
 
 /**
- * Modern Word Verification Screen using AndroidX ViewModel and Koin DI
- * - Uses StateFlow for reactive UI updates
- * - Integrates with Napier logging
+ * Android-specific UI using Compose
+ * - Uses shared WordVerificationViewModel via manual Koin injection
+ * - Platform-specific UI implementation
  * - Follows Material 3 design
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WordVerificationScreen(
-    viewModel: WordVerificationViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: WordVerificationViewModel = remember { 
+        GlobalContext.get().get<WordVerificationViewModel>() 
+    } // Manual Koin injection for shared ViewModel
 ) {
-    // Collect state from ViewModel
+    // Collect state from shared ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
     // Local state for text input
     var inputText by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     
-    Napier.d("WordVerificationScreen rendered - isLoading: ${uiState.isLoading}")
+    Napier.d("Android WordVerificationScreen rendered - isLoading: ${uiState.isLoading}")
     
     Column(
         modifier = modifier

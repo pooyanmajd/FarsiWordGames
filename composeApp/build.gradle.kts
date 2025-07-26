@@ -37,8 +37,9 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.navigation.compose)
             
-            // NEW: Enhanced Koin DI for Android
-            implementation(libs.bundles.koin.android.bundle)
+            // Koin DI - using core only (no androidx-compose integration)
+            implementation(libs.koin.core)
+            implementation(libs.koin.android)
         }
 
         commonMain.dependencies {

@@ -41,6 +41,10 @@ koin-annotations = "2.1.0"
 kvault = "2.1.1"
 firebase-gitlive = "2.2.0"
 
+# NEW: SwiftUI Integration
+koin-swiftui = "4.0.0"
+kmm-nativecoroutines = "1.0.0-ALPHA-28"
+
 [libraries]
 # Kotlin
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -103,6 +107,11 @@ kvault = { module = "com.liftric:kvault", version.ref = "kvault" }
 firebase-auth-gitlive = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-gitlive" }
 firebase-firestore-gitlive = { module = "dev.gitlive:firebase-firestore", version.ref = "firebase-gitlive" }
 
+# NEW: SwiftUI + KMM Integration  
+koin-swiftui = { module = "io.insert-koin:koin-swiftui", version.ref = "koin-swiftui" }
+kmm-nativecoroutines-core = { module = "com.rickclephas.kmm:kmm-nativecoroutines-core", version.ref = "kmm-nativecoroutines" }
+kmm-nativecoroutines-annotations = { module = "com.rickclephas.kmm:kmm-nativecoroutines-annotations", version.ref = "kmm-nativecoroutines" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -112,6 +121,9 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 room = { id = "androidx.room", version.ref = "room" }
 ksp = { id = "com.google.devtools.ksp", version = "2.1.0-1.0.29" }
 
+# NEW: KMM Native Coroutines Plugin
+kmm-nativecoroutines = { id = "com.rickclephas.kmm.nativecoroutines", version.ref = "kmm-nativecoroutines" }
+
 [bundles]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
 compose = ["compose-ui", "compose-ui-tooling-preview", "compose-foundation", "compose-material3"]
@@ -120,3 +132,6 @@ compose-android = ["compose-ui", "compose-ui-tooling-preview", "compose-foundati
 # NEW BUNDLES - Using your suggestions
 kmp-core = ["kotlinx-coroutines-core", "kotlinx-serialization-json", "kotlinx-datetime"]
 koin-android-bundle = ["koin-core", "koin-android", "koin-androidx-compose"]
+
+# NEW: SwiftUI Integration Bundle
+kmm-swiftui = ["koin-swiftui", "kmm-nativecoroutines-core", "kmm-nativecoroutines-annotations"]

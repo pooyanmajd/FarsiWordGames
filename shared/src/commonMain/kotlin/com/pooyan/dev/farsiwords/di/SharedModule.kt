@@ -1,7 +1,7 @@
 package com.pooyan.dev.farsiwords.di
 
 import com.pooyan.dev.farsiwords.data.WordChecker
-import com.pooyan.dev.farsiwords.presentation.WordVerificationLogic
+import com.pooyan.dev.farsiwords.presentation.WordVerificationViewModel
 import org.koin.dsl.module
 
 /**
@@ -13,8 +13,8 @@ val sharedModule = module {
     // Data layer
     single<WordChecker> { WordChecker }
     
-    // Business logic (shared across platforms)
-    single { WordVerificationLogic() }
+    // Shared ViewModels (work on all platforms)
+    single { WordVerificationViewModel() }
 }
 
 /**

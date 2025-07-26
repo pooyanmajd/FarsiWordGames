@@ -2,7 +2,6 @@ package com.pooyan.dev.farsiwords
 
 import android.app.Application
 import com.pooyan.dev.farsiwords.data.initAndroidContext
-import com.pooyan.dev.farsiwords.di.androidModule
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import org.koin.android.ext.koin.androidContext
@@ -39,7 +38,7 @@ class FarsiWordsApplication : Application() {
         initKoin {
             androidLogger(Level.DEBUG)
             androidContext(this@FarsiWordsApplication)
-            modules(androidModule) // Add Android-specific module
+            // Using shared modules only - no Android-specific module needed
         }
         Napier.i("💉 Koin DI initialized for Android")
     }

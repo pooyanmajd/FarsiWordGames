@@ -7,6 +7,8 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.room)
     alias(libs.plugins.ksp)
+    // TODO: Add kmm-nativecoroutines plugin when repository is configured
+    // alias(libs.plugins.kmm.nativecoroutines) // For SwiftUI observeState() helper
 }
 
 kotlin {
@@ -38,13 +40,18 @@ kotlin {
             
             // DI (keeping existing + adding improvements)
             implementation(libs.koin.core)
+            implementation(libs.koin.annotations) // For @Singleton, @Factory etc
             
             // Persistence
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             
-            // NEW: Logging
+            // Logging
             implementation(libs.napier)
+            
+            // TODO: Add KMM Native Coroutines when dependencies are available
+            // implementation(libs.kmm.nativecoroutines.core)
+            // implementation(libs.kmm.nativecoroutines.annotations)
         }
 
         androidMain.dependencies {
@@ -52,12 +59,24 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.kotlinx.coroutines.android)
             
-            // NEW: Enhanced Koin for Android
+            // Enhanced Koin for Android
             implementation(libs.bundles.koin.android.bundle)
         }
 
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            
+            // TODO: SwiftUI integration - add when dependencies are available:
+            // implementation(libs.koin.swiftui)           // For @KoinViewModel support
+            // implementation(libs.kmm.nativecoroutines.core) // For observeState() helper
+            
+            // For now, iOS will use the shared ViewModel directly:
+            // struct WordleView: View {
+            //     @StateObject var vm = WordVerificationViewModel() // Direct instantiation
+            //     var body: some View {
+            //         /* Use vm.uiState directly */
+            //     }
+            // }
         }
 
         commonTest.dependencies {
@@ -91,6 +110,12 @@ room {
 
 dependencies {
     add("kspCommonMainMetadata", libs.room.compiler)
+    // TODO: Add KSP for Koin annotations later when properly configured
+    // add("kspCommonMainMetadata", libs.koin.annotations)
+    // add("kspAndroid", libs.koin.annotations)
+    // add("kspIosX64", libs.koin.annotations)
+    // add("kspIosArm64", libs.koin.annotations)
+    // add("kspIosSimulatorArm64", libs.koin.annotations)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>>().configureEach {
