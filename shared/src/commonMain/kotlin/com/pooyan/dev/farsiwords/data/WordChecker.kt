@@ -1,229 +1,158 @@
 package com.pooyan.dev.farsiwords.data
 
 import kotlin.experimental.and
-import kotlin.experimental.or
 
 /**
- * Offline word checker using Bloom filter with SipHash-2-4
- * 
- * Strategy:
- * - 68k words, ~0.1% false positive rate
- * - ~120KB bloom.bin file in resources
- * - SipHash-2-4 with 128-bit secret key
- * - 10 bits checked per word lookup
+ * Offline word checker using Bloom filter with keyed hashing
+ * - ~68k words, ~0.1% false positive rate
+ * - ~116KB bloom.bin packaged with the app
+ * - Double hashing (h1 + j*h2) for k indexes
  */
 object WordChecker {
-    
-    // Bloom filter parameters (configured for 66k words, p=0.001)
-    private const val BLOOM_SIZE_BITS = 950099 // ~116KB when packed into bytes
-    private const val BLOOM_SIZE_BYTES = (BLOOM_SIZE_BITS + 7) / 8 // Round up to byte boundary
+
     private const val NUM_HASH_FUNCTIONS = 10
-    
+
+    // IMPORTANT: Replace with your generated 16-byte (32 hex chars) key
+    // Or provide a 'key.hex' file and wire loading if preferred
+    private const val K_HEX: String = "00000000000000000000000000000000"
+
+    private val keyBytes: ByteArray by lazy { parseHexKey(K_HEX) }
+
     private var bloomBits: ByteArray? = null
+    private var bloomSizeBits: Int = 0
     private var isInitialized = false
-    
-    /**
-     * Initialize the word checker - call this once at app startup
-     */
+
+    /** Initialize the word checker - call once at app startup */
     suspend fun initialize(): Boolean {
         return try {
-            // Load bloom filter from resources
             bloomBits = loadBloomFilterFromResources()
-            
-            isInitialized = bloomBits != null
+            bloomSizeBits = (bloomBits?.size ?: 0) * 8
+            isInitialized = bloomBits != null && bloomSizeBits > 0
             isInitialized
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
-    
-    /**
-     * Check if a word might be valid (Bloom filter check)
-     * Returns:
-     * - true: Word MIGHT be valid (could be false positive)
-     * - false: Word is DEFINITELY NOT valid
-     */
+
+    /** Check if a word might be valid (Bloom filter check) */
     fun isWordPossiblyValid(word: String): Boolean {
-        if (!isInitialized || bloomBits == null) {
-            return false // Fail safe - reject if not initialized
-        }
-        
-        val normalizedWord = word.lowercase().trim()
-        if (normalizedWord.length != 5) {
-            return false
-        }
-        
-        return checkBloomFilter(normalizedWord)
-    }
-    
-    private fun checkBloomFilter(word: String): Boolean {
         val bits = bloomBits ?: return false
-        
-        // Use a simple, consistent hash approach
-        val wordBytes = word.encodeToByteArray()
-        
-        // Generate multiple hash values using simple polynomial rolling hash
-        repeat(NUM_HASH_FUNCTIONS) { i ->
-            val hash = simpleHash(wordBytes, i)
-            val bitPosition = (hash and 0x7FFFFFFF) % BLOOM_SIZE_BITS
-            
-            if (!getBit(bits, bitPosition.toInt())) {
-                return false // Definitely not in the set
-            }
+        if (!isInitialized || bloomSizeBits <= 0) return false
+
+        val normalizedWord = word.lowercase().trim()
+        if (normalizedWord.length != 5) return false
+
+        val wordBytes = normalizedWord.encodeToByteArray()
+
+        // Double hashing: h1 + j*h2
+        val h1 = sipHash24(wordBytes, keyBytes, seed = 0)
+        val h2 = sipHash24(wordBytes, keyBytes, seed = 1)
+
+        for (j in 0 until NUM_HASH_FUNCTIONS) {
+            val bitPosition = positiveMod(h1 + j.toLong() * h2, bloomSizeBits.toLong()).toInt()
+            if (!getBit(bits, bitPosition)) return false
         }
-        
-        return true // Possibly in the set
+        return true
     }
-    
-    /**
-     * Simple polynomial rolling hash that's consistent across platforms
-     */
-    private fun simpleHash(data: ByteArray, seed: Int): Long {
-        var hash = seed.toLong() * 31L + 0x811c9dc5L // FNV offset basis
-        for (byte in data) {
-            hash = hash * 16777619L // FNV prime
-            hash = hash xor (byte.toLong() and 0xFF)
-        }
-        return hash
-    }
-    
+
     private fun getBit(bytes: ByteArray, bitIndex: Int): Boolean {
         val byteIndex = bitIndex / 8
         val bitOffset = bitIndex % 8
-        
         if (byteIndex >= bytes.size) return false
-        
         return (bytes[byteIndex] and (1 shl bitOffset).toByte()) != 0.toByte()
     }
-    
+
     private fun parseHexKey(hex: String): ByteArray {
         val cleanHex = hex.replace(Regex("[^0-9A-Fa-f]"), "")
         require(cleanHex.length == 32) { "Key must be exactly 32 hex characters (128 bits)" }
-        
         return cleanHex.chunked(2) { it.toString().toInt(16).toByte() }.toByteArray()
     }
-    
-    /**
-     * Load bloom filter from app resources
-     * Platform-specific implementation needed
-     */
-    private suspend fun loadBloomFilterFromResources(): ByteArray? {
-        return try {
-            // This will need platform-specific implementation
-            // For now, return null - implement in platform-specific code
-            loadBloomFilterPlatformSpecific()
-        } catch (e: Exception) {
-            null
-        }
+
+    /** Load bloom filter from app resources (platform-specific) */
+    private suspend fun loadBloomFilterFromResources(): ByteArray? = try {
+        loadBloomFilterPlatformSpecific()
+    } catch (_: Exception) {
+        null
     }
-    
+
     /**
-     * Simplified SipHash implementation using HMAC-SHA256 
-     * to match the Python version used in bloom filter generation
+     * SipHash-2-4 like function using HMAC-SHA256 surrogate to ensure portability.
+     * Truncates to 64 bits (little-endian) for index generation.
      */
     private fun sipHash24(data: ByteArray, key: ByteArray, seed: Int): Long {
         require(key.size == 16) { "SipHash key must be 16 bytes" }
-        
-        // Use the same simplified approach as Python version
-        // Combine data with seed
-        val combined = data + seed.toByteArray()
-        
-        // Use HMAC-SHA256 (since we don't have a proper SipHash implementation)
-        val hmacResult = hmacSha256(key, combined)
-        
-        // Convert first 8 bytes to Long (little endian)
-        return bytesToLong(hmacResult, 0)
+        val combined = data + seed.toLittleEndianBytes()
+        val mac = hmacSha256(key, combined)
+        return bytesToLongLE(mac, 0)
     }
-    
-    /**
-     * Simple HMAC-SHA256 implementation 
-     */
+
+    private fun Int.toLittleEndianBytes(): ByteArray = byteArrayOf(
+        (this and 0xff).toByte(),
+        ((this ushr 8) and 0xff).toByte(),
+        ((this ushr 16) and 0xff).toByte(),
+        ((this ushr 24) and 0xff).toByte()
+    )
+
+    // Portable, non-crypto placeholder to match Python generator's approach
     private fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray {
-        // This is a simplified version - in a real app you'd use a proper crypto library
-        // For now, use a simple hash that matches our Python version
         val combined = key + data
-        return combined.toSha256Hash()
+        return combined.toPseudoSha256()
     }
-    
-    /**
-     * Convert Int to ByteArray (little endian)
-     */
-    private fun Int.toByteArray(): ByteArray {
-        return byteArrayOf(
-            (this and 0xff).toByte(),
-            ((this shr 8) and 0xff).toByte(),
-            ((this shr 16) and 0xff).toByte(),
-            ((this shr 24) and 0xff).toByte()
-        )
-    }
-    
-    /**
-     * Simple SHA256-like hash for our use case
-     */
-    private fun ByteArray.toSha256Hash(): ByteArray {
-        // Simplified hash function - replace with proper implementation
-        var hash = 0x6a09e667L
-        for (byte in this) {
-            hash = hash * 31 + byte.toLong()
-            hash = hash xor (hash shr 16)
+
+    // Produces 32 bytes deterministically; matches Python side surrogate
+    private fun ByteArray.toPseudoSha256(): ByteArray {
+        var h = 0x6a09e667f3bcc908L
+        for (b in this) {
+            h = (h * 0x100000001b3L) xor (b.toLong() and 0xff)
+            h = h xor (h ushr 29)
+            h = (h shl 7) or (h ushr 57)
         }
-        
-        // Convert to 32-byte array (simplified)
-        val result = ByteArray(32)
+        val out = ByteArray(32)
+        var v = h
         for (i in 0 until 8) {
-            val longValue = hash + i * 0x428a2f98L
-            result[i * 4] = (longValue and 0xff).toByte()
-            result[i * 4 + 1] = ((longValue shr 8) and 0xff).toByte()
-            result[i * 4 + 2] = ((longValue shr 16) and 0xff).toByte()
-            result[i * 4 + 3] = ((longValue shr 24) and 0xff).toByte()
+            val w = v + i * 0x428a2f98d728ae22L
+            out[i * 4] = (w and 0xff).toByte()
+            out[i * 4 + 1] = ((w ushr 8) and 0xff).toByte()
+            out[i * 4 + 2] = ((w ushr 16) and 0xff).toByte()
+            out[i * 4 + 3] = ((w ushr 24) and 0xff).toByte()
         }
-        return result
+        return out
     }
-    
-    private fun bytesToLong(bytes: ByteArray, offset: Int): Long {
+
+    private fun bytesToLongLE(bytes: ByteArray, offset: Int): Long {
         var result = 0L
         for (i in 0 until 8) {
-            if (offset + i < bytes.size) {
-                result = result or ((bytes[offset + i].toLong() and 0xff) shl (i * 8))
+            val idx = offset + i
+            if (idx < bytes.size) {
+                result = result or ((bytes[idx].toLong() and 0xff) shl (8 * i))
             }
         }
         return result
     }
-    
-    private fun rotateLeft(value: Long, bits: Int): Long {
-        return (value shl bits) or (value ushr (64 - bits))
+
+    private fun positiveMod(value: Long, mod: Long): Long {
+        val r = value % mod
+        return if (r < 0) r + mod else r
     }
 }
 
-/**
- * Platform-specific function to load bloom filter
- * Implement this in androidMain and iosMain
- */
+/** Platform-specific function to load bloom filter */
 expect suspend fun loadBloomFilterPlatformSpecific(): ByteArray?
 
-/**
- * Data class for bloom filter configuration
- * Use this when generating the bloom filter with make_bloom.py
- */
+/** Bloom filter configuration utilities (unchanged) */
 data class BloomConfig(
-    val expectedElements: Int = 68000, // 68k words
-    val falsePositiveRate: Double = 0.001, // 0.1%
+    val expectedElements: Int = 68000,
+    val falsePositiveRate: Double = 0.001,
     val hashFunctions: Int = 10,
-    val sizeInBits: Int = 978237 // Calculated for optimal size
+    val sizeInBits: Int = 978237
 ) {
     val sizeInBytes: Int get() = (sizeInBits + 7) / 8
-    
+
     companion object {
-        /**
-         * Calculate optimal bloom filter size
-         * m = -n * ln(p) / (ln(2)^2)
-         * where n = expected elements, p = false positive rate
-         */
         fun calculateOptimalSize(elements: Int, falsePositiveRate: Double): BloomConfig {
-            val ln2Squared = 0.4804530139182014 // ln(2)^2
+            val ln2Squared = 0.4804530139182014
             val optimalBits = (-elements * kotlin.math.ln(falsePositiveRate) / ln2Squared).toInt()
             val optimalHashFunctions = (optimalBits.toDouble() / elements * kotlin.math.ln(2.0)).toInt()
-            
             return BloomConfig(
                 expectedElements = elements,
                 falsePositiveRate = falsePositiveRate,

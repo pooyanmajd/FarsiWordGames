@@ -89,7 +89,6 @@ Outputs: bloom.bin (~120KB) and key.hex (32 chars)
 
 import hashlib
 import secrets
-import struct
 import math
 from pathlib import Path
 
@@ -98,6 +97,7 @@ EXPECTED_ELEMENTS = {len(words_list)}
 FALSE_POSITIVE_RATE = 0.001  # 0.1%
 HASH_FUNCTIONS = 10
 
+
 def calculate_bloom_size():
     """Calculate optimal bloom filter size"""
     # m = -n * ln(p) / (ln(2)^2)
@@ -105,13 +105,32 @@ def calculate_bloom_size():
     optimal_bits = int(-EXPECTED_ELEMENTS * math.log(FALSE_POSITIVE_RATE) / ln2_squared)
     return optimal_bits
 
-def siphash_24(data: bytes, key: bytes, seed: int = 0) -> int:
-    """SipHash-2-4 implementation for consistent hashing"""
-    # Simplified implementation - use a proper library in production
-    import hmac
+
+def pseudo_hmac_sha256(key: bytes, data: bytes) -> bytes:
+    """Portable surrogate for HMAC-SHA256 to match Kotlin implementation"""
+    # Deterministic, not cryptographically secure
+    h = 0x6a09e667f3bcc908
+    for b in key + data:
+        h = (h * 0x100000001b3) ^ b
+        h ^= (h >> 29)
+        h = ((h << 7) & ((1 << 64) - 1)) | (h >> 57)
+    out = bytearray(32)
+    v = h
+    for i in range(8):
+        w = (v + i * 0x428a2f98d728ae22) & ((1 << 64) - 1)
+        out[i*4+0] = w & 0xff
+        out[i*4+1] = (w >> 8) & 0xff
+        out[i*4+2] = (w >> 16) & 0xff
+        out[i*4+3] = (w >> 24) & 0xff
+    return bytes(out)
+
+
+def siphash_24_like(data: bytes, key: bytes, seed: int = 0) -> int:
+    """SipHash-2-4 like function using the surrogate above (64-bit LE)"""
     combined = data + seed.to_bytes(4, 'little')
-    hash_obj = hmac.new(key, combined, hashlib.sha256)
-    return int.from_bytes(hash_obj.digest()[:8], 'little', signed=False)
+    mac = pseudo_hmac_sha256(key, combined)
+    return int.from_bytes(mac[:8], 'little', signed=False)
+
 
 def create_bloom_filter():
     """Create the bloom filter with Persian words"""
@@ -126,7 +145,7 @@ def create_bloom_filter():
     print(f"   Size: {{bloom_size_bits:,}} bits ({{bloom_size_bytes / 1024:.1f}} KB)")
     print(f"   Hash functions: {{HASH_FUNCTIONS}}")
     
-    # Generate random 128-bit key for SipHash
+    # Generate random 128-bit key (16 bytes)
     sip_key = secrets.token_bytes(16)
     
     # Initialize bloom filter (all zeros)
@@ -135,19 +154,17 @@ def create_bloom_filter():
     # Words to add to the filter
     words = {repr(words_list)}
     
-    # Add each word to the bloom filter
     for i, word in enumerate(words):
         if i % 5000 == 0:
             print(f"   Processing word {{i + 1:,}}/{{len(words):,}}...")
-        
         word_bytes = word.encode('utf-8')
         
-        # Generate hash functions using SipHash with different seeds
-        for hash_func in range(HASH_FUNCTIONS):
-            hash_value = siphash_24(word_bytes, sip_key, hash_func)
-            bit_position = hash_value % bloom_size_bits
-            
-            # Set the bit
+        # Double hashing: h1 + j*h2
+        h1 = siphash_24_like(word_bytes, sip_key, 0)
+        h2 = siphash_24_like(word_bytes, sip_key, 1)
+        
+        for j in range(HASH_FUNCTIONS):
+            bit_position = (h1 + j * h2) % bloom_size_bits
             byte_index = bit_position // 8
             bit_offset = bit_position % 8
             bloom_filter[byte_index] |= (1 << bit_offset)
@@ -156,16 +173,21 @@ def create_bloom_filter():
     with open('bloom.bin', 'wb') as f:
         f.write(bloom_filter)
     
-    # Write key to hex file  
+    # Write key to hex file
     with open('key.hex', 'w') as f:
         f.write(sip_key.hex().upper())
     
     print(f"✅ Bloom filter created successfully!")
     print(f"   bloom.bin: {{Path('bloom.bin').stat().st_size / 1024:.1f}} KB")
     print(f"   key.hex: {{sip_key.hex().upper()}}")
-    print(f"")
-    print(f"🔐 Add this key to your WordChecker.kt:")
-    print(f'   private const val K_HEX = "{{sip_key.hex().upper()}}"')
+    print("")
+    print("🔐 Add this key to your WordChecker.kt:")
+    print("   private const val K_HEX = \"" + sip_key.hex().upper() + "\"")
+    print("")
+    print("📦 Place files:")
+    print("   - Android: composeApp/src/androidMain/assets/bloom.bin")
+    print("   - iOS: add bloom.bin to iOS target bundle resources")
+
 
 if __name__ == "__main__":
     create_bloom_filter()
@@ -175,9 +197,7 @@ if __name__ == "__main__":
     with open(script_path, 'w', encoding='utf-8') as f:
         f.write(script_content)
     
-    # Make executable
     script_path.chmod(0o755)
-    
     print(f"📝 Created make_bloom.py script at: {script_path}")
     return script_path
 
@@ -193,10 +213,10 @@ if __name__ == "__main__":
     words = extract_words_for_bloom(input_file, output_file)
     
     if words:
-        # Also create the bloom filter generation script
         create_bloom_filter_script(words)
-        print(f"")
-        print(f"🚀 Next steps:")
-        print(f"   1. Run: python make_bloom.py")
-        print(f"   2. Copy bloom.bin to shared/src/commonMain/resources/")
-        print(f"   3. Update K_HEX in WordChecker.kt with the generated key") 
+        print("")
+        print("🚀 Next steps:")
+        print("   1. Run: python make_bloom.py")
+        print("   2. Android: copy bloom.bin to composeApp/src/androidMain/assets/")
+        print("      iOS: add bloom.bin to target bundle resources")
+        print("   3. Update K_HEX in WordChecker.kt with the generated key") 
