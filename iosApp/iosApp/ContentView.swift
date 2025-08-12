@@ -8,8 +8,7 @@ struct ContentView: View {
     @State private var lastResult = ""
     @State private var isLoading = false
     
-    // Create the Kotlin ViewModel
-    private let viewModel = WordVerificationViewModel()
+
     
     var body: some View {
         NavigationView {
@@ -98,7 +97,6 @@ struct ContentView: View {
         isLoading = true
         statusMessage = "Initializing word checker..."
         
-        // Initialize the Kotlin WordChecker
         Task {
             do {
                 let success = try await WordChecker.shared.initialize()
@@ -129,7 +127,7 @@ struct ContentView: View {
         
         Task {
             let isValid = WordChecker.shared.isWordPossiblyValid(word: word)
-            
+                
             DispatchQueue.main.async {
                 self.isLoading = false
                 let status = isValid ? "✅ Valid" : "❌ Invalid"

@@ -13,8 +13,8 @@ val sharedModule = module {
     // Data layer
     single<WordChecker> { WordChecker }
     
-    // Shared ViewModels (work on all platforms)
-    single { WordVerificationViewModel() }
+    // Shared ViewModels (constructor injection)
+    single { WordVerificationViewModel(get()) }
 }
 
 /**

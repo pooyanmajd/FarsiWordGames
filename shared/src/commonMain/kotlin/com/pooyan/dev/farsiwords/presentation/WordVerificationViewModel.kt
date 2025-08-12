@@ -11,20 +11,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 
 /**
  * Shared ViewModel for word verification - works on ALL platforms
  * - Cross-platform lifecycle management
- * - Uses Koin for dependency injection
+ * - Uses constructor injection for dependencies (SOLID)
  * - Uses Napier for cross-platform logging
  * - Contains all business logic
  */
-class WordVerificationViewModel : KoinComponent {
-    
-    // Koin injection
-    private val wordChecker: WordChecker by inject()
+class WordVerificationViewModel(
+    private val wordChecker: WordChecker
+) {
     
     // CoroutineScope for this ViewModel
     private val viewModelScope = CoroutineScope(
