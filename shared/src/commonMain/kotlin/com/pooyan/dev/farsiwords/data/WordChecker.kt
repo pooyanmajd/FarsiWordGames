@@ -16,7 +16,8 @@ object WordChecker {
     // Or provide a 'key.hex' file and wire loading if preferred
     private const val K_HEX: String = "00000000000000000000000000000000"
 
-    private val keyBytes: ByteArray by lazy { parseHexKey(K_HEX) }
+    @Volatile private var overrideKey: ByteArray? = null
+    private val keyBytes: ByteArray get() = overrideKey ?: parseHexKey(K_HEX)
 
     private var bloomBits: ByteArray? = null
     private var bloomSizeBits: Int = 0
@@ -133,6 +134,25 @@ object WordChecker {
     private fun positiveMod(value: Long, mod: Long): Long {
         val r = value % mod
         return if (r < 0) r + mod else r
+    }
+
+    // -------------------- Test helpers --------------------
+    fun overrideKeyForTesting(hex: String) {
+        overrideKey = parseHexKey(hex)
+    }
+
+    fun initializeForTesting(bloomBits: ByteArray, keyHex: String = K_HEX) {
+        overrideKeyForTesting(keyHex)
+        this.bloomBits = bloomBits
+        this.bloomSizeBits = bloomBits.size * 8
+        this.isInitialized = true
+    }
+
+    fun resetForTesting() {
+        overrideKey = null
+        bloomBits = null
+        bloomSizeBits = 0
+        isInitialized = false
     }
 }
 
