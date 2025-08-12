@@ -8,7 +8,8 @@ struct ContentView: View {
     @State private var lastResult = ""
     @State private var isLoading = false
     
-
+    // Resolve shared ViewModel from Koin (injected)
+    private let viewModel = KoinHelperKt.getWordVerificationViewModel()
     
     var body: some View {
         NavigationView {
