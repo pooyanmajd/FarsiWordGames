@@ -1,6 +1,6 @@
 package com.pooyan.dev.farsiwords.domain.model
 
-import kotlinx.datetime.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * Core game models for Farsi Wordle
@@ -95,18 +95,19 @@ data class DailyChallenge(
 )
 
 // Main game state
-data class Game(
+data class Game @OptIn(ExperimentalTime::class) constructor(
     val targetWord: FarsiWord,
     val guesses: List<Guess> = List(6) { Guess() },
     val currentGuessIndex: Int = 0,
     val gameState: GameState = GameState.PLAYING,
     val keyboardState: Map<Char, LetterState> = emptyMap(),
-    val startTime: Long = Clock.System.now().toEpochMilliseconds(),
+    val startTime: Long = kotlin.time.Clock.System.now().toEpochMilliseconds(),
     val endTime: Long? = null,
     val isDailyChallenge: Boolean = false,
     val coinsEarned: Int = 0,
     val pointsEarned: Int = 0
 ) {
     val isGameOver: Boolean get() = gameState == GameState.WON || gameState == GameState.LOST
-    val timeElapsed: Long get() = (endTime ?: Clock.System.now().toEpochMilliseconds()) - startTime
+    @OptIn(ExperimentalTime::class)
+    val timeElapsed: Long get() = (endTime ?: kotlin.time.Clock.System.now().toEpochMilliseconds()) - startTime
 } 

@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.time.ExperimentalTime
 
 /**
  * Shared ViewModel for word verification - works on ALL platforms
@@ -22,32 +22,32 @@ import org.koin.core.component.inject
  * - Contains all business logic
  */
 class WordVerificationViewModel : KoinComponent {
-    
+
     // Koin injection
     private val wordChecker: WordChecker by inject()
-    
+
     // CoroutineScope for this ViewModel
     private val viewModelScope = CoroutineScope(
         context = SupervisorJob() + Dispatchers.Main.immediate
     )
-    
+
     // UI State
     private val _uiState = MutableStateFlow(WordVerificationState())
     val uiState: StateFlow<WordVerificationState> = _uiState.asStateFlow()
-    
+
     init {
         Napier.d("Shared WordVerificationViewModel initialized")
         initializeWordChecker()
     }
-    
+
     private fun initializeWordChecker() {
         Napier.i("Starting word checker initialization")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isLoading = true, 
+                isLoading = true,
                 message = "Initializing word checker..."
             )
-            
+
             try {
                 val success = wordChecker.initialize()
                 if (success) {
@@ -75,31 +75,32 @@ class WordVerificationViewModel : KoinComponent {
             }
         }
     }
-    
+
+    @OptIn(ExperimentalTime::class)
     fun verifyWord(word: String) {
         if (word.isBlank()) {
             Napier.w("Attempted to verify empty word")
             return
         }
-        
+
         Napier.d("Verifying word: '$word'")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            
+
             try {
                 val isValid = wordChecker.isWordPossiblyValid(word.trim())
                 val result = WordVerificationResult(
                     word = word.trim(),
                     isValid = isValid,
-                    timestamp = Clock.System.now().toEpochMilliseconds()
+                    timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 )
-                
+
                 val updatedHistory = listOf(result) + _uiState.value.verificationHistory
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     verificationHistory = updatedHistory
                 )
-                
+
                 Napier.i("Word '$word' verification result: ${if (isValid) "VALID" else "INVALID"}")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
@@ -107,22 +108,23 @@ class WordVerificationViewModel : KoinComponent {
             }
         }
     }
-    
+
     fun clearHistory() {
         Napier.d("Clearing verification history")
         _uiState.value = _uiState.value.copy(verificationHistory = emptyList())
     }
-    
+
+    @OptIn(ExperimentalTime::class)
     fun testCommonWords() {
         Napier.i("Starting common words test")
         val testWords = listOf("داشتن", "ساختن", "گرفتن", "یافتن", "اوردن", "hello", "12345")
-        
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 message = "🧪 Testing common words..."
             )
-            
+
             try {
                 val results = testWords.map { word ->
                     val isValid = wordChecker.isWordPossiblyValid(word)
@@ -130,17 +132,17 @@ class WordVerificationViewModel : KoinComponent {
                     WordVerificationResult(
                         word = word,
                         isValid = isValid,
-                        timestamp = Clock.System.now().toEpochMilliseconds()
+                        timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
                     )
                 }
-                
+
                 val validCount = results.count { it.isValid }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     verificationHistory = results + _uiState.value.verificationHistory,
                     message = "🧪 Test completed: $validCount/${testWords.size} words passed"
                 )
-                
+
                 Napier.i("Common words test completed: $validCount/${testWords.size} words valid")
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -151,7 +153,7 @@ class WordVerificationViewModel : KoinComponent {
             }
         }
     }
-    
+
     fun onCleared() {
         Napier.d("Shared WordVerificationViewModel cleared")
         viewModelScope.cancel()
