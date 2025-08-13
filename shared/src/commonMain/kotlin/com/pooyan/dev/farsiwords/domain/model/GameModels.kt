@@ -1,5 +1,6 @@
 package com.pooyan.dev.farsiwords.domain.model
 
+import kotlin.time.Clock.System
 import kotlin.time.ExperimentalTime
 
 /**
@@ -101,7 +102,7 @@ data class Game @OptIn(ExperimentalTime::class) constructor(
     val currentGuessIndex: Int = 0,
     val gameState: GameState = GameState.PLAYING,
     val keyboardState: Map<Char, LetterState> = emptyMap(),
-    val startTime: Long = kotlin.time.Clock.System.now().toEpochMilliseconds(),
+    val startTime: Long = System.now().toEpochMilliseconds(),
     val endTime: Long? = null,
     val isDailyChallenge: Boolean = false,
     val coinsEarned: Int = 0,
@@ -109,5 +110,5 @@ data class Game @OptIn(ExperimentalTime::class) constructor(
 ) {
     val isGameOver: Boolean get() = gameState == GameState.WON || gameState == GameState.LOST
     @OptIn(ExperimentalTime::class)
-    val timeElapsed: Long get() = (endTime ?: kotlin.time.Clock.System.now().toEpochMilliseconds()) - startTime
+    val timeElapsed: Long get() = (endTime ?: System.now().toEpochMilliseconds()) - startTime
 } 

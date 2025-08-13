@@ -104,6 +104,7 @@ compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", ve
 # NEW LIBRARIES - Added from your example
 napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-annotations" }
+koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-annotations" }
 kvault = { module = "com.liftric:kvault", version.ref = "kvault" }
 firebase-auth-gitlive = { module = "dev.gitlive:firebase-auth", version.ref = "firebase-gitlive" }
 firebase-firestore-gitlive = { module = "dev.gitlive:firebase-firestore", version.ref = "firebase-gitlive" }

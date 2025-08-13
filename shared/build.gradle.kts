@@ -40,7 +40,7 @@ kotlin {
             
             // DI (keeping existing + adding improvements)
             implementation(libs.koin.core)
-            implementation(libs.koin.annotations) // For @Singleton, @Factory etc
+            implementation(libs.koin.annotations) // For @Single, @Factory, @KoinViewModel
             
             // Persistence
             implementation(libs.room.runtime)
