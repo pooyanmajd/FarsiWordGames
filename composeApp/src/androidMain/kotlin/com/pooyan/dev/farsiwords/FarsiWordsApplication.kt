@@ -1,7 +1,6 @@
 package com.pooyan.dev.farsiwords
 
 import android.app.Application
-import com.pooyan.dev.farsiwords.data.AndroidBloomResources
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import org.koin.android.ext.koin.androidContext
