@@ -9,10 +9,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
+import com.pooyan.dev.farsiwords.presentation.LoginScreen
 import com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel
 import org.koin.androidx.compose.get
 
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun WordVerificationApp() {
     val authViewModel: AuthViewModel = get()
-    val authState by authViewModel.authState.collectAsState()
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
     if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {
         WordVerificationScreen(modifier = Modifier.fillMaxSize())
