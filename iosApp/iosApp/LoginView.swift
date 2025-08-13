@@ -1,8 +1,10 @@
 import SwiftUI
 import Shared
+import KoinSwiftUI
 
 struct LoginView: View {
-    private let vm = KoinHelperKt.getKoin().get(objCClass: SharedAuthViewModel.self) as! AuthViewModel
+    @KoinViewModel
+    private var vm: AuthViewModel
 
     var body: some View {
         VStack(spacing: 12) {
