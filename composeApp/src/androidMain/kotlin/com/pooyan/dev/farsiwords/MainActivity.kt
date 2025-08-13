@@ -15,7 +15,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
 import com.pooyan.dev.farsiwords.presentation.LoginScreen
 import com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel
-import org.koin.androidx.compose.get
+import io.github.aakira.napier.Napier
+import org.koin.compose.koinInject
 
 /**
  * Main Android Activity for Persepolis Wordle
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun WordVerificationApp() {
-    val authViewModel: AuthViewModel = get()
+    val authViewModel: AuthViewModel = koinInject()
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
 
     if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {

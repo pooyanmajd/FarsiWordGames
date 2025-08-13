@@ -62,8 +62,9 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.kotlinx.coroutines.android)
             
-            // Enhanced Koin for Android
-            implementation(libs.bundles.koin.android.bundle)
+            // Koin for Android (no Compose here)
+            implementation(libs.koin.core)
+            implementation(libs.koin.android)
         }
 
         iosMain.dependencies {

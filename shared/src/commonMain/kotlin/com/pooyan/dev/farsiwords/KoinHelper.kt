@@ -8,6 +8,7 @@ import io.github.aakira.napier.Napier
 import org.koin.mp.KoinPlatformTools
 import org.koin.core.context.startKoin
 import org.koin.dsl.KoinAppDeclaration
+import kotlin.experimental.ExperimentalObjCName
 import kotlin.native.ObjCName
 
 /**
@@ -37,10 +38,12 @@ fun initLogging() {
 /**
  * Swift-accessible helpers for iOS to resolve dependencies from Koin
  */
-fun getKoin() = KoinPlatformTools.defaultContext().koin
+fun getKoin() = KoinPlatformTools.defaultContext().get()
 
+@OptIn(ExperimentalObjCName::class)
 @ObjCName("getWordVerificationViewModel", exact = true)
 fun getWordVerificationViewModel(): WordVerificationViewModel = getKoin().get()
 
+@OptIn(ExperimentalObjCName::class)
 @ObjCName("getAuthViewModel", exact = true)
 fun getAuthViewModel(): AuthViewModel = getKoin().get() 

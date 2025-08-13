@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aakira.napier.Napier
-import org.koin.androidx.compose.get
+import org.koin.compose.koinInject
 
 /**
  * Android-specific UI using Compose
@@ -28,7 +28,7 @@ import org.koin.androidx.compose.get
 @Composable
 fun WordVerificationScreen(
     modifier: Modifier = Modifier,
-    viewModel: WordVerificationViewModel = get()
+    viewModel: WordVerificationViewModel = koinInject()
 ) {
     // Collect state from shared ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

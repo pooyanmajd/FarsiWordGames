@@ -14,12 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel
 import com.pooyan.dev.farsiwords.domain.auth.AuthState
-import org.koin.androidx.compose.get
+import org.koin.compose.koinInject
 
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = get()
+    viewModel: AuthViewModel = koinInject()
 ) {
     val state by viewModel.authState.collectAsState()
 
