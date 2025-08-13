@@ -4,31 +4,31 @@ android-minSdk = "24"
 android-targetSdk = "35"
 
 # Core
-kotlin = "2.1.0"
+kotlin = "2.1.21"
 agp = "8.7.3"
-compose = "1.7.5"
+compose = "1.8.3"
 compose-activity = "1.9.3"
 
 # KMP Core
-coroutines = "1.9.0"
-serialization = "1.7.3"
-datetime = "0.6.1"
+coroutines = "1.10.2"
+serialization = "1.9.0"
+datetime = "0.7.1"
 
 # Networking
-ktor = "3.0.2"
+ktor = "3.2.3"
 
 # DI
-koin = "4.0.0"
+koin = "4.1.0"
 
 # Database
-room = "2.7.0-alpha11"
-sqlite = "2.5.0"
+room = "2.7.2"
+sqlite = "2.5.2"
 
 # Android
-lifecycle = "2.8.7"
-navigation = "2.8.4"
-core-ktx = "1.15.0"
-appcompat = "1.7.0"
+lifecycle = "2.9.2"
+navigation = "2.9.3"
+core-ktx = "1.16.0"
+appcompat = "1.7.1"
 
 # Testing
 junit = "4.13.2"
@@ -36,7 +36,7 @@ androidx-test-ext-junit = "1.2.1"
 espresso-core = "3.6.1"
 
 # NEW LIBRARIES - Added from your example
-napier = "2.6.1"
+napier = "2.7.1"
 koin-annotations = "2.1.0"
 kvault = "2.1.1"
 firebase-gitlive = "2.2.0"
@@ -119,7 +119,7 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 room = { id = "androidx.room", version.ref = "room" }
-ksp = { id = "com.google.devtools.ksp", version = "2.1.0-1.0.29" }
+ksp = { id = "com.google.devtools.ksp", version = "2.1.21-2.0.1" }
 
 # NEW: KMM Native Coroutines Plugin
 kmm-nativecoroutines = { id = "com.rickclephas.kmm.nativecoroutines", version.ref = "kmm-nativecoroutines" }
