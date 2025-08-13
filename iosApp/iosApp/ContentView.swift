@@ -10,10 +10,14 @@ struct ContentView: View {
     
     // Resolve shared ViewModel from Koin (injected)
     private let viewModel = KoinHelperKt.getWordVerificationViewModel()
+    private let authVM = KoinHelperKt.getKoin().get(objCClass: SharedAuthViewModel.self) as! AuthViewModel
     
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
+                // Simple gate: show login until authenticated
+                // Note: Binding to Kotlin StateFlow requires bridging; using actions only here
+                LoginView()
                 // Header
                 VStack {
                     Text("🇮🇷 Persian Word Checker")

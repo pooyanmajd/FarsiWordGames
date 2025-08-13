@@ -49,6 +49,9 @@ kotlin {
             // Logging
             implementation(libs.napier)
             
+            // Firebase Auth KMP can be added later with platform config
+            // implementation(libs.firebase-auth-gitlive)
+            
             // TODO: Add KMM Native Coroutines when dependencies are available
             // implementation(libs.kmm.nativecoroutines.core)
             // implementation(libs.kmm.nativecoroutines.annotations)

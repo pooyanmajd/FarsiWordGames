@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
@@ -40,10 +42,14 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun WordVerificationApp() {
-    // WordVerificationScreen handles its own ViewModel injection
-    WordVerificationScreen(
-        modifier = Modifier.fillMaxSize()
-    )
+    val authViewModel: com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel = org.koin.androidx.compose.get()
+    val authState by authViewModel.authState.collectAsState()
+
+    if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {
+        WordVerificationScreen(modifier = Modifier.fillMaxSize())
+    } else {
+        LoginScreen(modifier = Modifier.fillMaxSize())
+    }
 }
 
 @Preview(showBackground = true)
