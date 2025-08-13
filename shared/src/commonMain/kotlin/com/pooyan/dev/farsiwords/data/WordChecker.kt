@@ -38,18 +38,26 @@ object WordChecker {
         return try {
             // Try to load key from resources (if present)
             runCatching { resources.loadKeyHex() }.getOrNull()?.let { keyHex ->
-                val clean = keyHex.trim().replace("\n", "").replace("\r", "")
-                if (clean.length == 32) {
-                    overrideKey = parseHexKey(clean)
+                // Be tolerant: keep only hex chars, then use the first 32
+                val hexOnly = buildString(keyHex.length) {
+                    for (ch in keyHex) {
+                        val c = ch.lowercaseChar()
+                        if (c in '0'..'9' || c in 'a'..'f') append(c)
+                    }
+                }
+                if (hexOnly.length >= 32) {
+                    val use = hexOnly.substring(0, 32)
+                    overrideKey = parseHexKey(use)
                     Napier.i("WordChecker: Loaded key from resources")
                 } else {
-                    Napier.w("WordChecker: key.hex present but not 32 hex chars (len=${clean.length})")
+                    Napier.w("WordChecker: key.hex present but insufficient hex length (${hexOnly.length})")
                 }
             }
             bloomBits = resources.loadBloom()
             bloomSizeBits = (bloomBits?.size ?: 0) * 8
             isInitialized = bloomBits != null && bloomSizeBits > 0
-            Napier.i("WordChecker: Bloom loaded bytes=${bloomBits?.size ?: 0}, bits=$bloomSizeBits, ok=$isInitialized")
+            val keyPrefix = keyBytes.toHexPrefix()
+            Napier.i("WordChecker: Bloom loaded bytes=${bloomBits?.size ?: 0}, bits=$bloomSizeBits, ok=$isInitialized, keyPrefix=$keyPrefix")
             isInitialized
         } catch (e: Exception) {
             Napier.e("WordChecker: Initialization failed", e)
@@ -63,7 +71,7 @@ object WordChecker {
         if (!isInitialized || bloomSizeBits <= 0) return false
 
         val normalizedWord = normalizePersian(word)
-        Napier.d("WordChecker: verify word='$normalizedWord'")
+        Napier.d("WordChecker: verify word='$normalizedWord' (bits=${bits.size * 8}, keyPrefix=${keyBytes.toHexPrefix()})")
         if (normalizedWord.length != 5) return false
 
         val wordBytes = normalizedWord.encodeToByteArray()

@@ -42,6 +42,20 @@ object WordCheckerInitializer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     fun init(context: Context) {
         setApplicationContext(context)
+        // Proactively set key override from assets to avoid any parsing/fallback mismatches
+        runCatching {
+            val raw = context.assets.open("key.hex").bufferedReader().use { it.readText() }
+            val hexOnly = buildString(raw.length) {
+                for (ch in raw) {
+                    val c = ch.lowercaseChar()
+                    if (c in '0'..'9' || c in 'a'..'f') append(c)
+                }
+            }
+            if (hexOnly.length >= 32) {
+                val use = hexOnly.substring(0, 32)
+                WordChecker.overrideKeyForTesting(use)
+            }
+        }.onFailure { /* ignore */ }
         scope.launch {
             WordChecker.initialize(AndroidBloomResources(context.applicationContext))
         }
