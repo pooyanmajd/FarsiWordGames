@@ -98,12 +98,14 @@ FALSE_POSITIVE_RATE = 0.001  # 0.1%
 HASH_FUNCTIONS = 10
 
 
-def calculate_bloom_size():
-    """Calculate optimal bloom filter size"""
+def calculate_bloom_size_bits_and_bytes():
+    """Calculate optimal bloom filter size and round up to full bytes"""
     # m = -n * ln(p) / (ln(2)^2)
     ln2_squared = (math.log(2) ** 2)
     optimal_bits = int(-EXPECTED_ELEMENTS * math.log(FALSE_POSITIVE_RATE) / ln2_squared)
-    return optimal_bits
+    bytes_ = (optimal_bits + 7) // 8
+    exact_bits = bytes_ * 8  # IMPORTANT: use full bytes for modulo to match Kotlin side
+    return exact_bits, bytes_
 
 
 def pseudo_hmac_sha256(key: bytes, data: bytes) -> bytes:
@@ -135,9 +137,8 @@ def siphash_24_like(data: bytes, key: bytes, seed: int = 0) -> int:
 def create_bloom_filter():
     """Create the bloom filter with Persian words"""
     
-    # Calculate optimal size
-    bloom_size_bits = calculate_bloom_size()
-    bloom_size_bytes = (bloom_size_bits + 7) // 8
+    # Calculate optimal size (rounded to full bytes)
+    bloom_size_bits, bloom_size_bytes = calculate_bloom_size_bits_and_bytes()
     
     print(f"🔧 Creating Bloom filter...")
     print(f"   Words: {{EXPECTED_ELEMENTS:,}}")

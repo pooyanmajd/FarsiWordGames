@@ -33,3 +33,13 @@ actual suspend fun loadBloomFilterPlatformSpecific(): ByteArray? {
         null
     }
 } 
+
+/** Optionally load key.hex from assets (32 hex chars, uppercase/lowercase) */
+actual suspend fun loadKeyHexFromResources(): String? {
+    return try {
+        val context = androidContext ?: return null
+        context.assets.open("key.hex").bufferedReader().use { it.readText() }
+    } catch (_: Exception) {
+        null
+    }
+}

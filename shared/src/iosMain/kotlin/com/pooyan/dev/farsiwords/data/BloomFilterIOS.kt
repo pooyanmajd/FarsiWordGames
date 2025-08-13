@@ -39,3 +39,14 @@ actual suspend fun loadBloomFilterPlatformSpecific(): ByteArray? {
         null
     }
 } 
+
+@OptIn(ExperimentalForeignApi::class)
+actual suspend fun loadKeyHexFromResources(): String? {
+    return try {
+        val bundle = NSBundle.mainBundle
+        val path = bundle.pathForResource("key", ofType = "hex")
+        if (path != null) NSString.stringWithContentsOfFile(path, NSUTF8StringEncoding, null) as String else null
+    } catch (_: Exception) {
+        null
+    }
+}

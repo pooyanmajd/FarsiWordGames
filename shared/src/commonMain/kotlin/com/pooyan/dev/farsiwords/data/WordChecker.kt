@@ -1,5 +1,7 @@
 package com.pooyan.dev.farsiwords.data
 
+import io.github.aakira.napier.Napier
+import kotlin.concurrent.Volatile
 import kotlin.experimental.and
 
 /**
@@ -14,9 +16,10 @@ object WordChecker {
 
     // IMPORTANT: Replace with your generated 16-byte (32 hex chars) key
     // Or provide a 'key.hex' file and wire loading if preferred
-    private const val K_HEX: String = "00000000000000000000000000000000"
+    private const val K_HEX: String = " + sip_key.hex().upper() + "
 
-    @Volatile private var overrideKey: ByteArray? = null
+    @Volatile
+    private var overrideKey: ByteArray? = null
     private val keyBytes: ByteArray get() = overrideKey ?: parseHexKey(K_HEX)
 
     private var bloomBits: ByteArray? = null
@@ -26,11 +29,23 @@ object WordChecker {
     /** Initialize the word checker - call once at app startup */
     suspend fun initialize(): Boolean {
         return try {
+            // Try to load key from resources (if present)
+            runCatching { loadKeyHexFromResources() }.getOrNull()?.let { keyHex ->
+                val clean = keyHex.trim().replace("\n", "").replace("\r", "")
+                if (clean.length == 32) {
+                    overrideKey = parseHexKey(clean)
+                    Napier.i("WordChecker: Loaded key from resources")
+                } else {
+                    Napier.w("WordChecker: key.hex present but not 32 hex chars (len=${clean.length})")
+                }
+            }
             bloomBits = loadBloomFilterFromResources()
             bloomSizeBits = (bloomBits?.size ?: 0) * 8
             isInitialized = bloomBits != null && bloomSizeBits > 0
+            Napier.i("WordChecker: Bloom loaded bytes=${bloomBits?.size ?: 0}, bits=$bloomSizeBits, ok=$isInitialized")
             isInitialized
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Napier.e("WordChecker: Initialization failed", e)
             false
         }
     }
@@ -40,7 +55,7 @@ object WordChecker {
         val bits = bloomBits ?: return false
         if (!isInitialized || bloomSizeBits <= 0) return false
 
-        val normalizedWord = word.lowercase().trim()
+        val normalizedWord = normalizePersian(word)
         if (normalizedWord.length != 5) return false
 
         val wordBytes = normalizedWord.encodeToByteArray()
@@ -54,6 +69,30 @@ object WordChecker {
             if (!getBit(bits, bitPosition)) return false
         }
         return true
+    }
+
+    private fun normalizePersian(input: String): String {
+        val base = input.trim()
+            .replace("\u200C", "") // ZWNJ
+            .replace("\u200F", "") // RTL mark
+            .replace("\u200E", "") // LTR mark
+            .replace("\u064A", "\u06CC") // ARABIC YEH -> FARSI YEH
+            .replace("\u0643", "\u06A9") // ARABIC KAF -> KEHEH
+            .replace("\u0629", "\u0647") // TEH MARBUTA -> HEH
+            .replace("\u0670", "")       // SUPERSCRIPT ALEF
+            .replace("\u064B", "")       // FATHATAN
+            .replace("\u064C", "")       // DAMMATAN
+            .replace("\u064D", "")       // KASRATAN
+            .replace("\u064E", "")       // FATHA
+            .replace("\u064F", "")       // DAMMA
+            .replace("\u0650", "")       // KASRA
+            .replace("\u0651", "")       // SHADDA
+            .replace("\u0652", "")       // SUKUN
+            .replace("\u0653", "")       // MADDAH ABOVE
+            .replace("\u0654", "")       // HAMZA ABOVE
+            .replace("\u0655", "")       // HAMZA BELOW
+            .lowercase()
+        return base
     }
 
     private fun getBit(bytes: ByteArray, bitIndex: Int): Boolean {
@@ -158,6 +197,9 @@ object WordChecker {
 
 /** Platform-specific function to load bloom filter */
 expect suspend fun loadBloomFilterPlatformSpecific(): ByteArray?
+
+/** Platform-specific optional key loader (reads 32-hex chars) */
+expect suspend fun loadKeyHexFromResources(): String?
 
 /** Bloom filter configuration utilities (unchanged) */
 data class BloomConfig(
