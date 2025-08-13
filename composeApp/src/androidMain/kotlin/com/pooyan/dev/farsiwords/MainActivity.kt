@@ -13,7 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
-import io.github.aakira.napier.Napier
+import com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel
+import org.koin.androidx.compose.get
 
 /**
  * Main Android Activity for Persepolis Wordle
@@ -42,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun WordVerificationApp() {
-    val authViewModel: com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel = org.koin.androidx.compose.get()
+    val authViewModel: AuthViewModel = get()
     val authState by authViewModel.authState.collectAsState()
 
     if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {
