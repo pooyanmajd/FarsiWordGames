@@ -16,7 +16,7 @@ object WordChecker {
 
     // IMPORTANT: Replace with your generated 16-byte (32 hex chars) key
     // Or provide a 'key.hex' file and wire loading if preferred
-    private const val K_HEX: String = " + sip_key.hex().upper() + "
+    private const val K_HEX: String = "A5FF9F299D54F4110ED8A27E488DD3A2"
 
     @Volatile
     private var overrideKey: ByteArray? = null
@@ -26,11 +26,19 @@ object WordChecker {
     private var bloomSizeBits: Int = 0
     private var isInitialized = false
 
-    /** Initialize the word checker - call once at app startup */
+    /** Initialize using platform loaders (default). Prefer the DI overload for tests/platform code. */
     suspend fun initialize(): Boolean {
+        return initialize(object : BloomResources {
+            override suspend fun loadBloom(): ByteArray? = loadBloomFilterPlatformSpecific()
+            override suspend fun loadKeyHex(): String? = loadKeyHexFromResources()
+        })
+    }
+
+    /** Initialize with injected resources loader (SOLID-friendly, testable) */
+    suspend fun initialize(resources: BloomResources): Boolean {
         return try {
             // Try to load key from resources (if present)
-            runCatching { loadKeyHexFromResources() }.getOrNull()?.let { keyHex ->
+            runCatching { resources.loadKeyHex() }.getOrNull()?.let { keyHex ->
                 val clean = keyHex.trim().replace("\n", "").replace("\r", "")
                 if (clean.length == 32) {
                     overrideKey = parseHexKey(clean)
@@ -39,7 +47,7 @@ object WordChecker {
                     Napier.w("WordChecker: key.hex present but not 32 hex chars (len=${clean.length})")
                 }
             }
-            bloomBits = loadBloomFilterFromResources()
+            bloomBits = resources.loadBloom()
             bloomSizeBits = (bloomBits?.size ?: 0) * 8
             isInitialized = bloomBits != null && bloomSizeBits > 0
             Napier.i("WordChecker: Bloom loaded bytes=${bloomBits?.size ?: 0}, bits=$bloomSizeBits, ok=$isInitialized")
@@ -56,6 +64,7 @@ object WordChecker {
         if (!isInitialized || bloomSizeBits <= 0) return false
 
         val normalizedWord = normalizePersian(word)
+        Napier.d("WordChecker: verify word='$normalizedWord'")
         if (normalizedWord.length != 5) return false
 
         val wordBytes = normalizedWord.encodeToByteArray()
@@ -64,9 +73,16 @@ object WordChecker {
         val h1 = sipHash24(wordBytes, keyBytes, seed = 0)
         val h2 = sipHash24(wordBytes, keyBytes, seed = 1)
 
-        for (j in 0 until NUM_HASH_FUNCTIONS) {
-            val bitPosition = positiveMod(h1 + j.toLong() * h2, bloomSizeBits.toLong()).toInt()
-            if (!getBit(bits, bitPosition)) return false
+        val positions = IntArray(NUM_HASH_FUNCTIONS) { j ->
+            positiveMod(h1 + j.toLong() * h2, bloomSizeBits.toLong()).toInt()
+        }
+        Napier.d("WordChecker: positions=${positions.joinToString(limit=3, truncated=",...")}")
+
+        for (pos in positions) {
+            if (!getBit(bits, pos)) {
+                Napier.d("WordChecker: missing bit at pos=$pos of $bloomSizeBits (bloomBytes=${bits.size}) keyPrefix=${keyBytes.toHexPrefix()}")
+                return false
+            }
         }
         return true
     }
@@ -96,16 +112,26 @@ object WordChecker {
     }
 
     private fun getBit(bytes: ByteArray, bitIndex: Int): Boolean {
-        val byteIndex = bitIndex / 8
-        val bitOffset = bitIndex % 8
+        val byteIndex = bitIndex ushr 3 // divide by 8
+        val bitOffset = bitIndex and 7   // modulo 8
         if (byteIndex >= bytes.size) return false
-        return (bytes[byteIndex] and (1 shl bitOffset).toByte()) != 0.toByte()
+        val b = bytes[byteIndex].toInt() and 0xFF
+        return ((b ushr bitOffset) and 1) == 1
     }
 
     private fun parseHexKey(hex: String): ByteArray {
         val cleanHex = hex.replace(Regex("[^0-9A-Fa-f]"), "")
         require(cleanHex.length == 32) { "Key must be exactly 32 hex characters (128 bits)" }
         return cleanHex.chunked(2) { it.toString().toInt(16).toByte() }.toByteArray()
+    }
+
+    private fun ByteArray.toHexPrefix(): String {
+        val max = minOf(8, size)
+        val sb = StringBuilder()
+        for (i in 0 until max) {
+            sb.append(((this[i].toInt() and 0xFF)).toString(16).padStart(2, '0'))
+        }
+        return sb.toString().uppercase()
     }
 
     /** Load bloom filter from app resources (platform-specific) */
@@ -200,6 +226,12 @@ expect suspend fun loadBloomFilterPlatformSpecific(): ByteArray?
 
 /** Platform-specific optional key loader (reads 32-hex chars) */
 expect suspend fun loadKeyHexFromResources(): String?
+
+/** Abstraction for loading bloom/key (for DI and tests) */
+interface BloomResources {
+    suspend fun loadBloom(): ByteArray?
+    suspend fun loadKeyHex(): String?
+}
 
 /** Bloom filter configuration utilities (unchanged) */
 data class BloomConfig(

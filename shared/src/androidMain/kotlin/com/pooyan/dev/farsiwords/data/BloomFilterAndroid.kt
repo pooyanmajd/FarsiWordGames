@@ -1,45 +1,49 @@
 package com.pooyan.dev.farsiwords.data
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-// Global variable to hold Android context (will be set from MainActivity)
-private var androidContext: Context? = null
+/** Android implementation using explicit context (no globals) */
+class AndroidBloomResources(private val context: Context) : BloomResources {
+    override suspend fun loadBloom(): ByteArray? = try {
+        context.assets.open("bloom.bin").use { it.readBytes() }
+    } catch (_: Exception) { null }
 
-/**
- * Call this from Android Application or Activity to set the context
- */
-fun initAndroidContext(context: Context) {
-    androidContext = context.applicationContext
+    override suspend fun loadKeyHex(): String? = try {
+        context.assets.open("key.hex").bufferedReader().use { it.readText() }
+    } catch (_: Exception) { null }
 }
 
-/**
- * Android-specific implementation for loading bloom filter from assets
- */
-actual suspend fun loadBloomFilterPlatformSpecific(): ByteArray? {
-    return try {
-        val context = androidContext
-        if (context == null) {
-            println("Error: Android context not initialized. Call initAndroidContext() first.")
-            return null
-        }
-        
-        // Load from Android assets
-        context.assets.open("bloom.bin").use { inputStream ->
-            inputStream.readBytes()
-        }
-    } catch (e: Exception) {
-        println("Error loading bloom filter on Android: ${e.message}")
-        e.printStackTrace()
-        null
-    }
-} 
+// Backward-compatible platform functions for default initialization (used by shared VM)
+private var applicationContextRef: Context? = null
 
-/** Optionally load key.hex from assets (32 hex chars, uppercase/lowercase) */
-actual suspend fun loadKeyHexFromResources(): String? {
+internal fun setApplicationContext(ctx: Context) {
+    applicationContextRef = ctx.applicationContext
+}
+
+actual suspend fun loadBloomFilterPlatformSpecific(): ByteArray? {
+    val ctx = applicationContextRef ?: return null
     return try {
-        val context = androidContext ?: return null
-        context.assets.open("key.hex").bufferedReader().use { it.readText() }
-    } catch (_: Exception) {
-        null
+        ctx.assets.open("bloom.bin").use { it.readBytes() }
+    } catch (_: Exception) { null }
+}
+
+actual suspend fun loadKeyHexFromResources(): String? {
+    val ctx = applicationContextRef ?: return null
+    return try {
+        ctx.assets.open("key.hex").bufferedReader().use { it.readText() }
+    } catch (_: Exception) { null }
+}
+
+object WordCheckerInitializer {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    fun init(context: Context) {
+        setApplicationContext(context)
+        scope.launch {
+            WordChecker.initialize(AndroidBloomResources(context.applicationContext))
+        }
     }
 }
