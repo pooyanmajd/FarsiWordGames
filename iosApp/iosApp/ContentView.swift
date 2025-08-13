@@ -10,7 +10,7 @@ struct ContentView: View {
     
     // Resolve shared ViewModel from Koin (injected)
     private let viewModel = KoinHelperKt.getWordVerificationViewModel()
-    private let authVM = KoinHelperKt.getKoin().get(objCClass: SharedAuthViewModel.self) as! AuthViewModel
+    // AuthViewModel will be injected inside LoginView via KoinSwiftUI
     
     var body: some View {
         NavigationView {
