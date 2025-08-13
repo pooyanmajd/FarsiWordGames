@@ -1,15 +1,37 @@
 #!/usr/bin/env python3
 """
-Extract words from rich Persian word JSON for Bloom filter generation
-Reads from persian_packs_v2.json and outputs clean word list for make_bloom.py
+Extract normalized, unique 5-letter Persian words from a rich JSON for Bloom filter generation.
+The normalization mirrors WordChecker.normalizePersian() in the app so generator and app match.
 """
 
 import json
 import sys
 from pathlib import Path
 
+# Normalization identical to app (WordChecker.normalizePersian)
+SUBS_MAP = {
+    0x200C: '',   # ZWNJ
+    0x200F: '',   # RTL mark
+    0x200E: '',   # LTR mark
+    0x064A: 0x06CC,  # ARABIC YEH -> FARSI YEH
+    0x0643: 0x06A9,  # ARABIC KAF -> KEHEH
+    0x0629: 0x0647,  # TEH MARBUTA -> HEH
+}
+REMOVE_CPS = [
+    0x0670, 0x064B, 0x064C, 0x064D, 0x064E, 0x064F, 0x0650, 0x0651, 0x0652,
+    0x0653, 0x0654, 0x0655,
+]
+
+def normalize(word: str) -> str:
+    s = word.strip()
+    for k, v in SUBS_MAP.items():
+        s = s.replace(chr(k), '' if v == '' else chr(v))
+    for cp in REMOVE_CPS:
+        s = s.replace(chr(cp), '')
+    return s.lower()
+
 def extract_words_for_bloom(input_file: str, output_file: str = "words_for_bloom.txt"):
-    """Extract just the words from rich JSON format for Bloom filter"""
+    """Extract normalized unique 5-letter words from rich JSON for Bloom filter"""
     
     try:
         # Read the rich JSON data
@@ -18,18 +40,18 @@ def extract_words_for_bloom(input_file: str, output_file: str = "words_for_bloom
         
         print(f"📚 Loaded {len(words_data)} words from {input_file}")
         
-        # Extract unique words (in case there are duplicates)
+        # Collect unique normalized words (dedup after normalization)
         unique_words = set()
         pack_counts = {}
         difficulty_counts = {"easy": 0, "medium": 0, "hard": 0}
         
         for entry in words_data:
-            word = entry.get("word", "").strip()
+            raw_word = entry.get("word", "").strip()
             difficulty = entry.get("difficulty", "unknown")
             pack = entry.get("pack", "unknown")
-            
-            if word and len(word) == 5:  # Ensure 5-letter words only
-                unique_words.add(word)
+            normalized_word = normalize(raw_word)
+            if normalized_word and len(normalized_word) == 5:  # 5 letters after normalization
+                unique_words.add(normalized_word)
                 
                 # Count by difficulty
                 if difficulty in difficulty_counts:
@@ -47,7 +69,7 @@ def extract_words_for_bloom(input_file: str, output_file: str = "words_for_bloom
                 f.write(f"{word}\n")
         
         # Print statistics
-        print(f"✅ Extracted {len(sorted_words)} unique 5-letter words")
+        print(f"✅ Extracted {len(sorted_words)} unique 5-letter normalized words")
         print(f"📁 Output written to: {output_file}")
         print(f"📊 Difficulty distribution:")
         for diff, count in difficulty_counts.items():

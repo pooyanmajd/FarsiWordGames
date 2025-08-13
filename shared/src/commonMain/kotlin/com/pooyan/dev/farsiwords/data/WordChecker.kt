@@ -2,7 +2,6 @@ package com.pooyan.dev.farsiwords.data
 
 import io.github.aakira.napier.Napier
 import kotlin.concurrent.Volatile
-import kotlin.experimental.and
 
 /**
  * Offline word checker using Bloom filter with keyed hashing
@@ -16,7 +15,7 @@ object WordChecker {
 
     // IMPORTANT: Replace with your generated 16-byte (32 hex chars) key
     // Or provide a 'key.hex' file and wire loading if preferred
-    private const val K_HEX: String = "A5FF9F299D54F4110ED8A27E488DD3A2"
+    private const val K_HEX: String = "8BEBC47FC8F452CF86BFD4FD7143F8E7"
 
     @Volatile
     private var overrideKey: ByteArray? = null
@@ -76,7 +75,7 @@ object WordChecker {
         val positions = IntArray(NUM_HASH_FUNCTIONS) { j ->
             positiveMod(h1 + j.toLong() * h2, bloomSizeBits.toLong()).toInt()
         }
-        Napier.d("WordChecker: positions=${positions.joinToString(limit=3, truncated=",...")}")
+        Napier.d("WordChecker: positions=${positions.joinToString(limit = 3, truncated = ",...")}")
 
         for (pos in positions) {
             if (!getBit(bits, pos)) {
