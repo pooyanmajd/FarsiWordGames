@@ -4,8 +4,7 @@ import Shared
 @main
 struct iOSApp: App {
     init() {
-        KoinHelperKt.initLogging()
-        KoinHelperKt.initKoin()
+        KoinHelperKt.doInitKoin()
         _ = KoinHelperKt.getWordVerificationViewModel()
     }
     var body: some Scene {

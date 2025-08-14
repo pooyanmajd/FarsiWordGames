@@ -6,9 +6,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.room)
-    alias(libs.plugins.ksp)
-    // TODO: Add kmm-nativecoroutines plugin when repository is configured
-    // alias(libs.plugins.kmm.nativecoroutines) // For SwiftUI observeState() helper
 }
 
 kotlin {
@@ -38,9 +35,8 @@ kotlin {
             // Networking
             implementation(libs.bundles.ktor.common)
             
-            // DI (keeping existing + adding improvements)
+            // DI - Koin core only per KMP guidelines
             implementation(libs.koin.core)
-            implementation(libs.koin.annotations) // For @Single, @Factory, @KoinViewModel
             
             // Persistence
             implementation(libs.room.runtime)
@@ -62,7 +58,7 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.kotlinx.coroutines.android)
             
-            // Koin for Android (no Compose here)
+            // Koin for Android (platform features)
             implementation(libs.koin.core)
             implementation(libs.koin.android)
         }
@@ -110,20 +106,4 @@ android {
 
 room {
     schemaDirectory("$projectDir/schemas")
-}
-
-dependencies {
-    add("kspCommonMainMetadata", libs.room.compiler)
-    // TODO: Add KSP for Koin annotations later when properly configured
-    // add("kspCommonMainMetadata", libs.koin.annotations)
-    // add("kspAndroid", libs.koin.annotations)
-    // add("kspIosX64", libs.koin.annotations)
-    // add("kspIosArm64", libs.koin.annotations)
-    // add("kspIosSimulatorArm64", libs.koin.annotations)
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
-    }
 }

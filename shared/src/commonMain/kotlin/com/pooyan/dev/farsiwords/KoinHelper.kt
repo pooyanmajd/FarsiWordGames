@@ -26,6 +26,11 @@ fun initKoin(appDeclaration: KoinAppDeclaration = {}) =
  */
 fun initKoin() = initKoin {}
 
+// Swift-friendly wrapper with a unique name (no default params/overloads)
+fun doInitKoin() {
+    initKoin {}
+}
+
 /**
  * Initialize logging with Napier
  * Call this from each platform's entry point
