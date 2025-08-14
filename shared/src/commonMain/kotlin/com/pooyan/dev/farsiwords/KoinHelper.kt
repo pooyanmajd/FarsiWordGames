@@ -40,10 +40,6 @@ fun initLogging() {
  */
 fun getKoin() = KoinPlatformTools.defaultContext().get()
 
-@OptIn(ExperimentalObjCName::class)
-@ObjCName("getWordVerificationViewModel", exact = true)
 fun getWordVerificationViewModel(): WordVerificationViewModel = getKoin().get()
 
-@OptIn(ExperimentalObjCName::class)
-@ObjCName("getAuthViewModel", exact = true)
-fun getAuthViewModel(): AuthViewModel = getKoin().get() 
+fun getAuthViewModel(): AuthViewModel = getKoin().get()

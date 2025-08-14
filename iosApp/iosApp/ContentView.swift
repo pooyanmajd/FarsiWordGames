@@ -23,7 +23,7 @@ struct ContentView: View {
                     Text("🇮🇷 Persian Word Checker")
                         .font(.title2)
                         .fontWeight(.bold)
-                    Text("Bloom Filter Test")
+                    Text("Lexicon Lookup Test")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -110,9 +110,9 @@ struct ContentView: View {
                     self.isLoading = false
                     if success as! Bool {
                         self.isInitialized = true
-                        self.statusMessage = "✅ Word checker initialized successfully!\n🔍 Bloom filter loaded (116KB)\n📝 Ready to verify Persian words"
+                        self.statusMessage = "✅ Word checker initialized successfully!\n📚 Lexicon loaded (exact lookup)\n📝 Ready to verify Persian words"
                     } else {
-                        self.statusMessage = "❌ Failed to initialize word checker\nCheck if bloom.bin is in bundle"
+                        self.statusMessage = "❌ Failed to initialize word checker\nCheck if words_5_be.bin is in bundle"
                     }
                 }
             } catch {
@@ -136,10 +136,8 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 self.isLoading = false
                 let status = isValid ? "✅ Valid" : "❌ Invalid"
-                let confidence = isValid ? "High (Bloom filter passed)" : "Certain (Not in word set)"
-                let details = word.count != 5 ? "Must be exactly 5 letters" : 
-                            isValid ? "Word might be valid (0.1% chance of false positive)" : 
-                            "Word not found in dictionary"
+                let confidence = isValid ? "Exact match (lexicon)" : "Not in lexicon"
+                let details = word.count != 5 ? "Must be exactly 5 letters" : (isValid ? "Found in lexicon" : "Word not found")
                 
                 self.lastResult = """
                 Word: \(word)

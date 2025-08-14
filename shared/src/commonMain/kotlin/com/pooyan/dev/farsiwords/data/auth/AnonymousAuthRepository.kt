@@ -14,7 +14,10 @@ class AnonymousAuthRepository : AuthRepository {
 
     override suspend fun signInAnonymously(): Result<AuthUser> {
         _authState.value = AuthState.Loading
-        val uid = Random.nextBytes(8).joinToString(separator = "") { "%02x".format(it) }
+        val uid = Random.nextBytes(8).joinToString(separator = "") { byte ->
+            val v = (byte.toInt() and 0xFF)
+            v.toString(16).padStart(2, '0')
+        }
         val user = AuthUser(uid = uid, isAnonymous = true, providerId = "anonymous")
         _authState.value = AuthState.Authenticated(user)
         return Result.success(user)
