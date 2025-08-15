@@ -7,6 +7,7 @@ import com.pooyan.dev.farsiwords.domain.model.GameState
 import com.pooyan.dev.farsiwords.domain.model.Guess
 import com.pooyan.dev.farsiwords.domain.model.Letter
 import com.pooyan.dev.farsiwords.domain.model.WordDifficulty
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,7 @@ class WordVerificationViewModel(
             currentGuessIndex = 0
         )
     )
+    @NativeCoroutines
     val gameState: StateFlow<Game> = _gameState.asStateFlow()
 
     init {

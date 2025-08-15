@@ -43,7 +43,7 @@ firebase-gitlive = "2.2.0"
 
 # NEW: SwiftUI Integration
 koin-swiftui = "4.0.0"
-kmm-nativecoroutines = "1.0.0-ALPHA-28"
+kmm-nativecoroutines = "1.0.0-ALPHA-43" # Kotlin 2.1.21-compatible
 
 [libraries]
 # Kotlin
@@ -111,8 +111,8 @@ firebase-firestore-gitlive = { module = "dev.gitlive:firebase-firestore", versio
 
 # NEW: SwiftUI + KMM Integration  
 koin-swiftui = { module = "io.insert-koin:koin-swiftui", version.ref = "koin-swiftui" }
-kmm-nativecoroutines-core = { module = "com.rickclephas.kmm:kmm-nativecoroutines-core", version.ref = "kmm-nativecoroutines" }
-kmm-nativecoroutines-annotations = { module = "com.rickclephas.kmm:kmm-nativecoroutines-annotations", version.ref = "kmm-nativecoroutines" }
+kmm-nativecoroutines-core = { module = "com.rickclephas.kmp:kmp-nativecoroutines-core", version.ref = "kmm-nativecoroutines" }
+kmm-nativecoroutines-annotations = { module = "com.rickclephas.kmp:kmp-nativecoroutines-annotations", version.ref = "kmm-nativecoroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -122,9 +122,7 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 room = { id = "androidx.room", version.ref = "room" }
 ksp = { id = "com.google.devtools.ksp", version = "2.1.21-2.0.1" }
-
-# NEW: KMM Native Coroutines Plugin
-kmm-nativecoroutines = { id = "com.rickclephas.kmm.nativecoroutines", version.ref = "kmm-nativecoroutines" }
+kmm-nativecoroutines = { id = "com.rickclephas.kmp.nativecoroutines", version.ref = "kmm-nativecoroutines" }
 
 [bundles]
 ktor-common = ["ktor-client-core", "ktor-client-content-negotiation", "ktor-serialization-kotlinx-json"]
