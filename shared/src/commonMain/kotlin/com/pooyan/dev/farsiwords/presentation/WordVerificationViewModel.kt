@@ -1,6 +1,13 @@
 package com.pooyan.dev.farsiwords.presentation
 
 import com.pooyan.dev.farsiwords.data.WordChecker
+import com.pooyan.dev.farsiwords.domain.model.FarsiWord
+import com.pooyan.dev.farsiwords.domain.model.Game
+import com.pooyan.dev.farsiwords.domain.model.GameState
+import com.pooyan.dev.farsiwords.domain.model.Guess
+import com.pooyan.dev.farsiwords.domain.model.Letter
+import com.pooyan.dev.farsiwords.domain.model.WordDifficulty
+import com.rickclephas.kmp.nativecoroutines.NativeCoroutines
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,22 +16,21 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 /**
  * Shared ViewModel for word verification - works on ALL platforms
  * - Cross-platform lifecycle management
- * - Uses Koin for dependency injection
+ * - Uses constructor injection for dependencies (SOLID)
  * - Uses Napier for cross-platform logging
  * - Contains all business logic
  */
-class WordVerificationViewModel : KoinComponent {
-
-    // Koin injection
-    private val wordChecker: WordChecker by inject()
+class WordVerificationViewModel(
+    private val wordChecker: WordChecker
+) {
 
     // CoroutineScope for this ViewModel
     private val viewModelScope = CoroutineScope(
@@ -35,9 +41,31 @@ class WordVerificationViewModel : KoinComponent {
     private val _uiState = MutableStateFlow(WordVerificationState())
     val uiState: StateFlow<WordVerificationState> = _uiState.asStateFlow()
 
+    // Add game state
+    private val _gameState = MutableStateFlow(
+        Game(
+            targetWord = FarsiWord(
+                id = 1,
+                word = "داشتن",
+                difficulty = WordDifficulty.MEDIUM,
+                difficultyDescription = "متوسط",
+                letters = listOf("د", "ا", "ش", "ت", "ن"),
+                letterSet = "داشتن",
+                hasRareLetter = false,
+                isAnswer = true,
+                pack = "pack_1"
+            ),
+            guesses = MutableList(6) { Guess() },
+            currentGuessIndex = 0
+        )
+    )
+    @NativeCoroutines
+    val gameState: StateFlow<Game> = _gameState.asStateFlow()
+
     init {
         Napier.d("Shared WordVerificationViewModel initialized")
         initializeWordChecker()
+        // Initialize game here if needed
     }
 
     private fun initializeWordChecker() {
@@ -92,7 +120,7 @@ class WordVerificationViewModel : KoinComponent {
                 val result = WordVerificationResult(
                     word = word.trim(),
                     isValid = isValid,
-                    timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                    timestamp = Clock.System.now().toEpochMilliseconds()
                 )
 
                 val updatedHistory = listOf(result) + _uiState.value.verificationHistory
@@ -132,7 +160,7 @@ class WordVerificationViewModel : KoinComponent {
                     WordVerificationResult(
                         word = word,
                         isValid = isValid,
-                        timestamp = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                        timestamp = Clock.System.now().toEpochMilliseconds()
                     )
                 }
 
@@ -150,6 +178,93 @@ class WordVerificationViewModel : KoinComponent {
                     message = "❌ Test failed: ${e.message}"
                 )
                 Napier.e("Common words test failed", e)
+            }
+        }
+    }
+
+    // Borrowed/adapted: Add letter to current guess
+    fun addLetter(letter: String) {
+        viewModelScope.launch {
+            _gameState.update { current ->
+                if (current.isGameOver) return@update current
+                
+                val currentGuess = current.guesses[current.currentGuessIndex]
+                val position = currentGuess.letters.indexOfFirst { it.char.isEmpty() }
+                if (position == -1) return@update current
+                
+                val updatedLetters = currentGuess.letters.toMutableList().apply {
+                    this[position] = Letter(letter)
+                }
+                val updatedGuesses = current.guesses.toMutableList().apply {
+                    this[current.currentGuessIndex] = currentGuess.copy(letters = updatedLetters)
+                }
+                
+                current.copy(guesses = updatedGuesses)
+            }
+        }
+    }
+
+    // Borrowed/adapted: Remove last letter from current guess
+    fun removeLetter() {
+        viewModelScope.launch {
+            _gameState.update { current ->
+                if (current.isGameOver) return@update current
+                
+                val currentGuess = current.guesses[current.currentGuessIndex]
+                val position = currentGuess.letters.indexOfLast { it.char.isNotEmpty() }
+                if (position == -1) return@update current
+                
+                val updatedLetters = currentGuess.letters.toMutableList().apply {
+                    this[position] = Letter()
+                }
+                val updatedGuesses = current.guesses.toMutableList().apply {
+                    this[current.currentGuessIndex] = currentGuess.copy(letters = updatedLetters)
+                }
+                
+                current.copy(guesses = updatedGuesses)
+            }
+        }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    fun submitGuess() {
+        viewModelScope.launch {
+            _gameState.update { current ->
+                if (current.isGameOver || !current.guesses[current.currentGuessIndex].isComplete) return@update current
+                
+                val guess = current.guesses[current.currentGuessIndex]
+                
+                // Pre-validate with Bloom (your existing checker)
+                if (!wordChecker.isWordPossiblyValid(guess.word)) {
+                    // Handle invalid (e.g., not in dictionary) - perhaps shake animation in UI
+                    return@update current.copy() // Or add error state
+                }
+                
+                // Evaluate against target
+                val evaluated = guess.evaluate(current.targetWord.word)
+                val updatedGuesses = current.guesses.toMutableList().apply {
+                    this[current.currentGuessIndex] = evaluated
+                }
+                
+                val isCorrect = evaluated.word == current.targetWord.word
+                val nextIndex = current.currentGuessIndex + 1
+                val isLost = nextIndex >= current.guesses.size && !isCorrect
+                
+                val newState = when {
+                    isCorrect -> GameState.WON
+                    isLost -> GameState.LOST
+                    else -> GameState.PLAYING
+                }
+                
+                val updatedKeyboard = if (newState == GameState.PLAYING) current.updateKeyboardState() else current.keyboardState
+                
+                current.copy(
+                    guesses = updatedGuesses,
+                    currentGuessIndex = if (isCorrect || isLost) current.currentGuessIndex else nextIndex,
+                    gameState = newState,
+                    keyboardState = updatedKeyboard,
+                    endTime = if (newState != GameState.PLAYING) Clock.System.now().toEpochMilliseconds() else null
+                )
             }
         }
     }

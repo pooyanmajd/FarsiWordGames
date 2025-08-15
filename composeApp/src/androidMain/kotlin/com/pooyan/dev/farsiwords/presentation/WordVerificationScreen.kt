@@ -1,26 +1,38 @@
 package com.pooyan.dev.farsiwords.presentation
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.aakira.napier.Napier
-import org.koin.core.context.GlobalContext
+import com.pooyan.dev.farsiwords.domain.model.GameState
+import com.pooyan.dev.farsiwords.ui.components.WordleGrid
+import com.pooyan.dev.farsiwords.ui.components.WordleKeyboard
+import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
 
 /**
  * Android-specific UI using Compose
- * - Uses shared WordVerificationViewModel via manual Koin injection
+ * - Uses shared WordVerificationViewModel via Koin injection
  * - Platform-specific UI implementation
  * - Follows Material 3 design
  */
@@ -28,139 +40,67 @@ import org.koin.core.context.GlobalContext
 @Composable
 fun WordVerificationScreen(
     modifier: Modifier = Modifier,
-    viewModel: WordVerificationViewModel = remember { 
-        GlobalContext.get().get<WordVerificationViewModel>() 
-    } // Manual Koin injection for shared ViewModel
+    viewModel: WordVerificationViewModel = koinInject()
 ) {
-    // Collect state from shared ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    
-    // Local state for text input
-    var inputText by remember { mutableStateOf("") }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    
-    Napier.d("Android WordVerificationScreen rendered - isLoading: ${uiState.isLoading}")
-    
+    val game by viewModel.gameState.collectAsStateWithLifecycle()
+
+    // Shake animation for invalid guess
+    var shakeOffset by remember { mutableStateOf(0f) }
+    // Trigger shake if needed (e.g., on invalid submit - assume ViewModel sets a flag, or derive)
+    val shouldShake by remember {
+        derivedStateOf {
+            // Trigger on invalid submit (e.g., check if current guess is complete but not evaluated - adapt as needed)
+            game.guesses[game.currentGuessIndex].isComplete && game.gameState == GameState.PLAYING  // Placeholder
+        }
+    }
+
+    LaunchedEffect(shouldShake) {
+        if (shouldShake) {
+            // Simple shake: left-right
+            // Animate to 10, then -10, then 0
+            // Use a loop or keyframe, but keep simple
+            // For now, set shakeOffset = 10f, delay, -10f, delay, 0f
+            shakeOffset = 10f
+            delay(50)
+            shakeOffset = -10f
+            delay(50)
+            shakeOffset = 0f
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(16.dp)
     ) {
-        // Title
+        // Game Status
         Text(
-            text = "🏛️ Persepolis Wordle - Word Verification",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            text = when (game.gameState) {
+                GameState.WON -> "You Won!"
+                GameState.LOST -> "Game Over! Word was ${game.targetWord.word}"
+                else -> "Guess the Word"
+            },
+            style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
-        // Status Message
-        Card(
+
+        // Grid with shake
+        WordleGrid(
+            game = game,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (uiState.isInitialized) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.errorContainer
-                }
-            )
-        ) {
-            Text(
-                text = uiState.message,
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        
-        // Input Section
-        if (uiState.isInitialized) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { inputText = it },
-                label = { Text("Enter 5-letter Persian word") },
-                placeholder = { Text("داشتن") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                enabled = !uiState.isLoading,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Done
-                ),
-                supportingText = {
-                    Text("Enter exactly 5 Persian letters")
-                }
-            )
-            
-            // Action Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        viewModel.verifyWord(inputText)
-                        keyboardController?.hide()
-                    },
-                    enabled = !uiState.isLoading && inputText.isNotBlank(),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Verify Word")
-                    }
-                }
-                
-                OutlinedButton(
-                    onClick = { viewModel.testCommonWords() },
-                    enabled = !uiState.isLoading,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Test Common")
-                }
-                
-                OutlinedButton(
-                    onClick = { 
-                        viewModel.clearHistory()
-                        inputText = ""
-                    },
-                    enabled = uiState.verificationHistory.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Clear")
-                }
-            }
-        }
-        
-        // Results History
-        if (uiState.verificationHistory.isNotEmpty()) {
-            Text(
-                text = "Verification History",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(uiState.verificationHistory) { result ->
-                    WordResultCard(result = result)
-                }
-            }
-        }
+                .weight(1f)
+                .offset(x = shakeOffset.dp)  // Fixed: use offset instead of translate
+        )
+
+        // Keyboard
+        WordleKeyboard(
+            keyboardState = game.keyboardState,
+            onLetterPressed = viewModel::addLetter,
+            onDeletePressed = viewModel::removeLetter,
+            onEnterPressed = viewModel::submitGuess,
+            modifier = Modifier.padding(top = 16.dp)
+        )
     }
 }
 
@@ -192,14 +132,14 @@ private fun WordResultCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Text(
                     text = if (result.isValid) "✅ Valid" else "❌ Invalid",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
             }
-            
+
             Text(
                 text = if (result.isValid) {
                     "Word might be valid (0.1% chance of false positive)"
@@ -209,7 +149,7 @@ private fun WordResultCard(
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 4.dp)
             )
-            
+
             Text(
                 text = "Verified: ${formatTimestamp(result.timestamp)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -223,7 +163,7 @@ private fun WordResultCard(
 private fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
-    
+
     return when {
         diff < 1000 -> "Just now"
         diff < 60000 -> "${diff / 1000}s ago"

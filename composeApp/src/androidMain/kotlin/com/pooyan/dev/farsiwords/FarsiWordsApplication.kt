@@ -1,7 +1,6 @@
 package com.pooyan.dev.farsiwords
 
 import android.app.Application
-import com.pooyan.dev.farsiwords.data.initAndroidContext
 import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import org.koin.android.ext.koin.androidContext
@@ -20,11 +19,11 @@ class FarsiWordsApplication : Application() {
         // Initialize logging first
         initializeLogging()
         
-        // Initialize Android context for shared module
-        initAndroidContext(this)
-        
         // Initialize Koin DI
         initializeKoin()
+        
+        // Initialize WordChecker with Android resources (non-suspending wrapper)
+        com.pooyan.dev.farsiwords.data.WordCheckerInitializer.init(this)
         
         Napier.i("🏛️ Persepolis Wordle Android app initialized")
     }

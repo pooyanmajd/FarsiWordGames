@@ -1,35 +1,37 @@
 package com.pooyan.dev.farsiwords.data
 
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-// Global variable to hold Android context (will be set from MainActivity)
-private var androidContext: Context? = null
+// Backward-compatible platform functions for default initialization (used by shared VM)
+private var applicationContextRef: Context? = null
 
-/**
- * Call this from Android Application or Activity to set the context
- */
-fun initAndroidContext(context: Context) {
-    androidContext = context.applicationContext
+internal fun setApplicationContext(ctx: Context) {
+    applicationContextRef = ctx.applicationContext
 }
 
-/**
- * Android-specific implementation for loading bloom filter from assets
- */
-actual suspend fun loadBloomFilterPlatformSpecific(): ByteArray? {
+// Bloom and key are deprecated and removed in favor of exact lexicon
+
+actual suspend fun loadLexiconPlatformSpecific(): ByteArray? {
+    val ctx = applicationContextRef ?: return null
     return try {
-        val context = androidContext
-        if (context == null) {
-            println("Error: Android context not initialized. Call initAndroidContext() first.")
-            return null
+        ctx.assets.open("words_5_be.bin").use { it.readBytes() }
+    } catch (_: Exception) { null }
+}
+
+object WordCheckerInitializer {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    fun init(context: Context) {
+        setApplicationContext(context)
+        // Proactively set key override from assets to avoid any parsing/fallback mismatches
+        runCatching {
+            // No key needed anymore
+        }.onFailure { /* ignore */ }
+        scope.launch {
+            WordChecker.initialize()
         }
-        
-        // Load from Android assets
-        context.assets.open("bloom.bin").use { inputStream ->
-            inputStream.readBytes()
-        }
-    } catch (e: Exception) {
-        println("Error loading bloom filter on Android: ${e.message}")
-        e.printStackTrace()
-        null
     }
-} 
+}
