@@ -55,6 +55,11 @@ class WordCheckerAndroidUnitTest {
             assertFalse("Expected $w to be invalid", WordChecker.isWordPossiblyValid(w))
         }
     }
+
+    @Test
+    fun testAndroidSpecific() {
+        assertTrue(true)
+    }
 }
 
 

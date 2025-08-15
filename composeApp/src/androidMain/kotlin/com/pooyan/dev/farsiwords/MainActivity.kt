@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
 import com.pooyan.dev.farsiwords.presentation.LoginScreen
 import com.pooyan.dev.farsiwords.presentation.SplashScreen
@@ -50,11 +51,13 @@ private fun WordVerificationApp() {
     // Simple gate: show splash until initialized by Application
     val isReady = com.pooyan.dev.farsiwords.data.WordChecker.isReady()
     if (!isReady) {
-        SplashScreen()
+        SplashScreen(onNavigateToWordVerification = {
+
+        })
         return
     }
 
-    if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {
+    if (authState is Authenticated) {
         WordVerificationScreen(modifier = Modifier.fillMaxSize())
     } else {
         LoginScreen(modifier = Modifier.fillMaxSize())

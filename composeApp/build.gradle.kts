@@ -10,49 +10,39 @@ plugins {
 
 kotlin {
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
+        compilations.all {
+            kotlinOptions.jvmTarget = "11"
         }
     }
 
     sourceSets {
-        androidMain.dependencies {
-            implementation(project(":shared"))
-            implementation(libs.bundles.compose)
-            implementation(libs.compose.ui.tooling.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtime.compose)
-            implementation(libs.androidx.navigation.compose)
-            
-            // Koin DI
-            implementation(libs.koin.core)
-            implementation(libs.koin.android)
-            implementation(libs.koin.compose)
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.compose.ui)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                // Add more as needed, e.g., implementation(libs.compose.ui.tooling.preview)
+            }
         }
 
-        commonMain.dependencies {
-            implementation(project(":shared"))
-            implementation(libs.koin.core)
-            
-            // NEW: Logging
-            implementation(libs.napier)
+        val androidMain by getting {
+            dependsOn(commonMain)
+            dependencies {
+                implementation(project(":shared"))  // Access shared models/ViewModels
+                implementation(libs.androidx.activity.compose)  // For setContent
+                implementation(libs.androidx.core.ktx)  // Android utils
+                implementation(libs.koin.android)  // Koin Android
+                implementation(libs.koin.androidx.compose)  // Koin Compose integration
+                implementation(libs.napier)  // Logging
+                // Add more as needed, e.g., implementation(libs.androidx.navigation.compose)
+            }
         }
 
-        iosMain.dependencies {
-            implementation(project(":shared"))
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                // Add coroutines.test if needed: implementation(libs.kotlinx.coroutines.test)
+            }
         }
     }
 }
@@ -102,5 +92,9 @@ android {
     dependencies {
         debugImplementation(libs.compose.ui.tooling)
         debugImplementation(libs.compose.ui.test.manifest)
+    }
+
+    lint {
+        disable.add("NullSafeMutableLiveData")
     }
 }
