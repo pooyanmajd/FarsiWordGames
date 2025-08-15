@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
 import com.pooyan.dev.farsiwords.presentation.LoginScreen
+import com.pooyan.dev.farsiwords.presentation.SplashScreen
 import com.pooyan.dev.farsiwords.presentation.auth.AuthViewModel
 import io.github.aakira.napier.Napier
 import org.koin.compose.koinInject
@@ -27,9 +28,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        
-        Napier.i("🏛️ MainActivity created")
-        
+
         setContent {
             MaterialTheme {
                 Surface(
@@ -47,6 +46,13 @@ class MainActivity : ComponentActivity() {
 private fun WordVerificationApp() {
     val authViewModel: AuthViewModel = koinInject()
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
+
+    // Simple gate: show splash until initialized by Application
+    val isReady = com.pooyan.dev.farsiwords.data.WordChecker.isReady()
+    if (!isReady) {
+        SplashScreen()
+        return
+    }
 
     if (authState is com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated) {
         WordVerificationScreen(modifier = Modifier.fillMaxSize())

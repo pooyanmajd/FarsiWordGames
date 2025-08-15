@@ -12,13 +12,16 @@ object WordChecker {
     // Exact lexicon: fixed-length UTF-16BE 5-letter words for binary search
     private var lexiconBytes: ByteArray? = null
     private var lexiconCount: Int = 0
-    private val lexiconRecordSize: Int = 10 // 5 UTF-16 code units, big-endian
+    private const val LEXICON_RECORD_SIZE: Int = 10 // 5 UTF-16 code units, big-endian
     private var isInitialized = false
 
     /** Initialize using platform lexicon loader */
     suspend fun initialize(): Boolean {
         return initializeInternal()
     }
+
+    /** Public readiness flag for UI to gate navigation */
+    fun isReady(): Boolean = isInitialized
 
     private suspend fun initializeInternal(): Boolean {
         return try {
@@ -28,7 +31,7 @@ object WordChecker {
                         ((lexBytes[1].toInt() and 0xFF) shl 16) or
                         ((lexBytes[2].toInt() and 0xFF) shl 8) or
                         (lexBytes[3].toInt() and 0xFF)
-                val expectedSize = 4 + count * lexiconRecordSize
+                val expectedSize = 4 + count * LEXICON_RECORD_SIZE
                 if (count > 0 && lexBytes.size >= expectedSize) {
                     lexiconBytes = lexBytes
                     lexiconCount = count
@@ -85,7 +88,7 @@ object WordChecker {
 
     private fun encodeUtf16BEFixed5(s: String): ByteArray? {
         if (s.length != 5) return null
-        val out = ByteArray(lexiconRecordSize)
+        val out = ByteArray(LEXICON_RECORD_SIZE)
         var idx = 0
         for (i in 0 until 5) {
             val code = s[i].code
@@ -111,9 +114,9 @@ object WordChecker {
     }
 
     private fun compareRecord(bytes: ByteArray, index: Int, key: ByteArray): Int {
-        val base = 4 + index * lexiconRecordSize
+        val base = 4 + index * LEXICON_RECORD_SIZE
         var i = 0
-        while (i < lexiconRecordSize) {
+        while (i < LEXICON_RECORD_SIZE) {
             val a = bytes[base + i].toInt() and 0xFF
             val b = key[i].toInt() and 0xFF
             if (a != b) return a - b
@@ -122,27 +125,6 @@ object WordChecker {
         return 0
     }
 
-    // -------------------- Test helpers --------------------
-    fun initializeForTestingLexicon(lexicon: ByteArray) {
-        this.lexiconBytes = lexicon
-        if (lexicon.size >= 4) {
-            val count = ((lexicon[0].toInt() and 0xFF) shl 24) or
-                    ((lexicon[1].toInt() and 0xFF) shl 16) or
-                    ((lexicon[2].toInt() and 0xFF) shl 8) or
-                    (lexicon[3].toInt() and 0xFF)
-            this.lexiconCount = count
-            this.isInitialized = count > 0
-        } else {
-            this.lexiconCount = 0
-            this.isInitialized = false
-        }
-    }
-
-    fun resetForTesting() {
-        lexiconBytes = null
-        lexiconCount = 0
-        isInitialized = false
-    }
 }
 
 /** Platform-specific function to load exact lexicon (UTF-16BE fixed-length records) */
