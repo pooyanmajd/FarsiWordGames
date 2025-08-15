@@ -29,6 +29,12 @@ kotlin {
                 implementation(libs.kmm.nativecoroutines.annotations)   // <-- here
             }
         }
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
 
         val androidMain by getting {
             dependencies { implementation(libs.koin.android) }
@@ -38,6 +44,14 @@ kotlin {
         val iosMain by creating { dependsOn(commonMain) }
         val iosX64Main by getting; val iosArm64Main by getting; val iosSimulatorArm64Main by getting
         listOf(iosX64Main, iosArm64Main, iosSimulatorArm64Main).forEach { it.dependsOn(iosMain) }
+        val iosTest by creating {
+            dependsOn(commonTest)
+        }
+        val iosX64Test by getting { dependsOn(iosTest) }
+        val iosArm64Test by getting { dependsOn(iosTest) }
+        val iosSimulatorArm64Test by getting { dependsOn(iosTest) }
+
+        // Note: To use in Xcode without CocoaPods, build with ./gradlew build, then add shared/build/xcode-frameworks/Shared.framework to your iOS project in Xcode (embed and sign).
     }
 }
 

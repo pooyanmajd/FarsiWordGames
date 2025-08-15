@@ -17,7 +17,6 @@ struct ContentView: View {
             VStack(spacing: 16) {
                 // Simple gate: show login until authenticated
                 // Note: Binding to Kotlin StateFlow requires bridging; using actions only here
-                LoginView()
                 // Header
                 VStack {
                     Text("🇮🇷 Persian Word Checker")

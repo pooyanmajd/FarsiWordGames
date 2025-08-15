@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import shared  // Assuming your shared module is imported
+import Shared  // Assuming your shared module is imported
 
 struct WordVerificationView: View {
     let viewModel: WordVerificationViewModel

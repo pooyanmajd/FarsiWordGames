@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.pooyan.dev.farsiwords.domain.auth.AuthState.Authenticated
 import com.pooyan.dev.farsiwords.presentation.WordVerificationScreen
 import com.pooyan.dev.farsiwords.presentation.LoginScreen
@@ -64,6 +63,7 @@ private fun WordVerificationApp() {
     }
 }
 
+/*
 @Preview(showBackground = true)
 @Composable
 private fun WordVerificationAppPreview() {
@@ -71,4 +71,4 @@ private fun WordVerificationAppPreview() {
         // Note: Preview won't work with Koin injection
         // Use a mock setup for previews if needed
     }
-}
+}*/

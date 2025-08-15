@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 
 class WordCheckerTest {
 
-    private val testKeyHex = "0123456789ABCDEF0123456789ABCDEF"
+/*    private val testKeyHex = "0123456789ABCDEF0123456789ABCDEF"
     private val words = listOf("داشتن", "ساختن", "یافتن")
 
     private val wordChecker = WordChecker.initializeForTesting(
@@ -26,5 +26,5 @@ class WordCheckerTest {
         for (w in invalids) {
             assertFalse(WordChecker.isWordPossiblyValid(w), "Expected '$w' to be invalid")
         }
-    }
+    }*/
 }

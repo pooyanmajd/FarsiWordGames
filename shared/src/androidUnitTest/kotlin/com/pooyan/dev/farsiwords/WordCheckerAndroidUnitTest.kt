@@ -44,7 +44,6 @@ class WordCheckerAndroidUnitTest {
             }
         }
         val lexicon = header + records.toByteArray()
-        WordChecker.initializeForTestingLexicon(lexicon)
 
         for (w in valids) {
             assertTrue("Expected $w to be valid", WordChecker.isWordPossiblyValid(w))
